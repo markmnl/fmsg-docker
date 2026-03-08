@@ -1,0 +1,78 @@
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PGUSER}
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+      POSTGRES_DB: ${PGDATABASE}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  fmsgid:
+    image: ghcr.io/markmnl/fmsgid:latest
+    restart: unless-stopped
+    environment:
+      GIN_MODE: ${GIN_MODE:-release}
+      FMSGID_PORT: ${FMSGID_PORT:-8080}
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${PGDATABASE}
+      PGUSER: ${PGUSER}
+      PGPASSWORD: ${PGPASSWORD}
+      PGSSLMODE: disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  fmsgd:
+    build:
+      context: ../docker/fmsgd
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      FMSG_DOMAIN: ${FMSG_DOMAIN}
+      FMSG_DATA_DIR: /opt/fmsg/data
+      FMSG_ID_URL: http://fmsgid:${FMSGID_PORT:-8080}
+      FMSG_SKIP_DOMAIN_IP_CHECK: ${FMSG_SKIP_DOMAIN_IP_CHECK:-false}
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${PGDATABASE}
+      PGUSER: ${PGUSER}
+      PGPASSWORD: ${PGPASSWORD}
+      PGSSLMODE: disable
+    volumes:
+      - fmsg_data:/opt/fmsg/data
+    ports:
+      - "${FMSG_PORT:-4930}:4930"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      fmsgid:
+        condition: service_started
+
+  fmsg-webapi:
+    image: ghcr.io/markmnl/fmsg-webapi:latest
+    restart: unless-stopped
+    environment:
+      FMSG_DOMAIN: ${FMSG_DOMAIN}
+      FMSG_ID_URL: http://fmsgid:${FMSGID_PORT:-8080}
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${PGDATABASE}
+      PGUSER: ${PGUSER}
+      PGPASSWORD: ${PGPASSWORD}
+      PGSSLMODE: disable
+    depends_on:
+      - fmsgd
+      - fmsgid
+
+volumes:
+  postgres_data:
+  fmsg_data:
