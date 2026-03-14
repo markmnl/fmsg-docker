@@ -121,9 +121,7 @@ The PostgreSQL instance hosts two separate databases (`fmsgd` and `fmsgid`) with
 | `FMSGID_WRITER_PGPASSWORD`   | yes      |            | Password for `fmsgid_writer` role (used by fmsgid)            |
 | `FMSGID_READER_PGPASSWORD`   | init     |            | Password for `fmsgid_reader` role (only needed on first run)  |
 
-Variables marked **init** are only required on the first startup when the database
-is being initialised. They can be passed as command-line environment variables
-(see [Getting Started](#getting-started)) to avoid storing them on disk.
+Variables marked **init** are only required on the first startup when the database is being initialised. They can be passed as command-line environment variables (see [Getting Started](#getting-started)) to avoid storing them on disk.S
 
 #### Database Init Scripts
 
