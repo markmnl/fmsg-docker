@@ -50,12 +50,9 @@ The compose stack uses two Docker named volumes:
 | `postgres_data` | `/var/lib/postgresql/data` | postgres          | All PostgreSQL databases and WAL  |
 | `fmsg_data`     | `/opt/fmsg/data`       | fmsgd, fmsg-webapi   | fmsg host data (keys, messages)   |
 
-> **WARNING:** These volumes contain **sensitive application data** including
-> database credentials, private keys, and user messages. Restrict access to the
-> Docker host and the volumes directory accordingly.
+> **WARNING:** These volumes contain **sensitive application data** including user identities and messages. Restrict access to the Docker host and the volumes directory accordingly.
 >
-> Ensure you have a **backup plan** for both volumes. Data loss from a volume
-> being deleted or corrupted is not recoverable without backups.
+> Ensure you have a **backup plan** for both volumes. Data loss from a volume being deleted or corrupted is not recoverable without backups. Access to backups should equally restricted - consider encryption needs.
 
 ## Getting Started
 
