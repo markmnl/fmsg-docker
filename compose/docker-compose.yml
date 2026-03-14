@@ -4,13 +4,18 @@ services:
     image: postgres:18-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${PGUSER}
+      POSTGRES_USER: ${PGUSER:-postgres}
       POSTGRES_PASSWORD: ${PGPASSWORD}
-      POSTGRES_DB: ${PGDATABASE}
+      POSTGRES_DB: postgres
+      FMSGD_WRITER_PGPASSWORD: ${FMSGD_WRITER_PGPASSWORD}
+      FMSGD_READER_PGPASSWORD: ${FMSGD_READER_PGPASSWORD}
+      FMSGID_WRITER_PGPASSWORD: ${FMSGID_WRITER_PGPASSWORD}
+      FMSGID_READER_PGPASSWORD: ${FMSGID_READER_PGPASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ../docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PGUSER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,9 +30,9 @@ services:
       FMSGID_PORT: ${FMSGID_PORT:-8080}
       PGHOST: postgres
       PGPORT: 5432
-      PGDATABASE: ${PGDATABASE}
-      PGUSER: ${PGUSER}
-      PGPASSWORD: ${PGPASSWORD}
+      PGDATABASE: fmsgid
+      PGUSER: fmsgid_writer
+      PGPASSWORD: ${FMSGID_WRITER_PGPASSWORD}
       PGSSLMODE: disable
     depends_on:
       postgres:
@@ -45,9 +50,9 @@ services:
       FMSG_SKIP_DOMAIN_IP_CHECK: ${FMSG_SKIP_DOMAIN_IP_CHECK:-false}
       PGHOST: postgres
       PGPORT: 5432
-      PGDATABASE: ${PGDATABASE}
-      PGUSER: ${PGUSER}
-      PGPASSWORD: ${PGPASSWORD}
+      PGDATABASE: fmsgd
+      PGUSER: fmsgd_writer
+      PGPASSWORD: ${FMSGD_WRITER_PGPASSWORD}
       PGSSLMODE: disable
     volumes:
       - fmsg_data:/opt/fmsg/data
@@ -69,10 +74,13 @@ services:
       FMSG_ID_URL: http://fmsgid:${FMSGID_PORT:-8080}
       PGHOST: postgres
       PGPORT: 5432
-      PGDATABASE: ${PGDATABASE}
-      PGUSER: ${PGUSER}
-      PGPASSWORD: ${PGPASSWORD}
+      PGDATABASE: fmsgd
+      PGUSER: fmsgd_writer
+      PGPASSWORD: ${FMSGD_WRITER_PGPASSWORD}
+      FMSG_DATA_DIR: /opt/fmsg/data
       PGSSLMODE: disable
+    volumes:
+      - fmsg_data:/opt/fmsg/data
     depends_on:
       - fmsgd
       - fmsgid
