@@ -13,7 +13,7 @@ create table if not exists msg (
 	version			int					not null,
     pid           	bigint          	references msg (id),
 	flags		  	int					not null,
-    time_sent     	double precision 	not null,   -- time sending host recieved message for sending, message timestamp field
+    time_sent     	double precision,             -- time sending host recieved message for sending, message timestamp field, NULL means message not ready for sending i.e. draft
     from_addr     	varchar(255)    	not null,
     topic         	varchar(255)    	not null, 
     type          	varchar(255)    	not null,
@@ -58,4 +58,3 @@ drop trigger if exists trg_msg_to_insert on msg_to;
 create trigger trg_msg_to_insert
     after insert on msg_to
     for each row execute function notify_msg_to_insert();
-
