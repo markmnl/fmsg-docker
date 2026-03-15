@@ -13,7 +13,7 @@ create table if not exists msg (
 	version			int					not null,
     pid           	bigint          	references msg (id),
 	flags		  	int					not null,
-    time_sent     	double precision 	not null,   -- time sending host recieved message for sending, message timestamp field
+    time_sent     	double precision,               -- null while draft; set when sent
     from_addr     	varchar(255)    	not null,
     topic         	varchar(255)    	not null, 
     type          	varchar(255)    	not null,

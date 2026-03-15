@@ -1,0 +1,27 @@
+# Compose override for integration tests.
+#
+# Adds a shared "fmsg-test" Docker network so the two fmsgd instances
+# (hairpin.local and example.com) can discover each other via Docker DNS
+# using network aliases — no /etc/hosts manipulation required.
+#
+# Parameterised by environment variables:
+#   FMSG_DOMAIN              – the domain this instance serves (used as network alias)
+#   FMSG_WEBAPI_HOST_PORT    – host port mapped to fmsg-webapi
+#   FMSG_API_PORT            – port webapi listens on inside container (default 8000)
+
+services:
+
+  fmsgd:
+    networks:
+      default:
+      fmsg-test:
+        aliases:
+          - ${FMSG_DOMAIN}
+
+  fmsg-webapi:
+    ports:
+      - "${FMSG_WEBAPI_HOST_PORT:-8081}:${FMSG_API_PORT:-8000}"
+
+networks:
+  fmsg-test:
+    external: true

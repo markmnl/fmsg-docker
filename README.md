@@ -7,6 +7,7 @@ Dockerised stack composing a full fmsg setup including: fmsgd, fmsgid and fmsg-w
 - [Structure](#structure)
 - [Services](#services)
 - [Persistent Data Volumes](#persistent-data-volumes)
+- [Integration Tests](#integration-tests)
 - [Getting Started](#getting-started)
 - [Environment Variables](#environment-variables)
   - [General](#general)
@@ -94,6 +95,22 @@ The compose stack uses two Docker named volumes:
 
 
 
+## Integration Tests
+
+End-to-end tests that spin up two full stacks (`hairpin.local` and `example.com`) on a shared Docker network and exchange messages between them using [fmsg-cli](https://github.com/markmnl/fmsg-cli).
+
+**Prerequisites:** Docker, docker compose, Go 1.24+, curl.
+
+```bash
+# Run tests
+./test/run-tests.sh
+
+# Tear down stacks & network
+./test/run-tests.sh cleanup
+```
+
+Tests also run on demand via the **Integration Test** GitHub Actions workflow.
+
 ## Environment Variables
 
 Configure these in `compose/.env`. Variables marked **required** have no default and must be set.
@@ -112,26 +129,27 @@ Configure these in `compose/.env`. Variables marked **required** have no default
 
 The PostgreSQL instance hosts two separate databases (`fmsgd` and `fmsgid`) with dedicated roles per service.
 
-| Variable                      | Required | Default    | Description                                                    |
-|-------------------------------|----------|------------|----------------------------------------------------------------|
-| `PGUSER`                      | no       | `postgres` | PostgreSQL superuser name (used for first-run init only)       |
-| `PGPASSWORD`                  | init     |            | PostgreSQL superuser password (only needed on first run)       |
+| Variable                     | Required | Default    | Description                                                    |
+|------------------------------|----------|------------|----------------------------------------------------------------|
+| `PGUSER`                     | no       | `postgres` | PostgreSQL superuser name (used for first-run init only)       |
+| `PGPASSWORD`                 | init     |            | PostgreSQL superuser password (only needed on first run)       |
 | `FMSGD_WRITER_PGPASSWORD`    | yes      |            | Password for `fmsgd_writer` role (used by fmsgd & webapi)     |
 | `FMSGD_READER_PGPASSWORD`    | init     |            | Password for `fmsgd_reader` role (only needed on first run)   |
 | `FMSGID_WRITER_PGPASSWORD`   | yes      |            | Password for `fmsgid_writer` role (used by fmsgid)            |
 | `FMSGID_READER_PGPASSWORD`   | init     |            | Password for `fmsgid_reader` role (only needed on first run)  |
 
-Variables marked **init** are only required on the first startup when the database is being initialised. They can be passed as command-line environment variables (see [Getting Started](#getting-started)) to avoid storing them on disk.S
+Variables marked **init** are only required on the first startup when the database is being initialised. They can be passed as command-line environment variables (see [Getting Started](#getting-started)) to avoid storing them on disk.
 
 #### Database Init Scripts
 
 On first startup (empty data volume), PostgreSQL runs the scripts in `docker/postgres/init/` in order:
 
-| Script               | Purpose                                         |
-|----------------------|-------------------------------------------------|
+| Script               | Purpose                                               |
+|----------------------|-------------------------------------------------------|
 | `001-init.sh`        | Creates roles (with passwords from env) and databases |
-| `002-ddl.sql`        | Creates tables and other database objects        |
-| `999-permissions.sql`| Grants permissions after all objects exist        |
+| `002-fmsgd-dd.sql`   | Creates tables and other database objects for fmsgd   |
+| `002-fmsgid-dd.sql`  | Creates tables and other database objects for fmsgid  |
+| `999-permissions.sql`| Grants permissions after all objects exist            |
 
 > **WARNING:** To re-run initialisation you must remove the `postgres_data` volume.
 > This **permanently destroys all data** in both the `fmsgd` and `fmsgid` databases

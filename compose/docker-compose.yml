@@ -72,6 +72,8 @@ services:
     environment:
       FMSG_DOMAIN: ${FMSG_DOMAIN}
       FMSG_ID_URL: http://fmsgid:${FMSGID_PORT:-8080}
+      FMSG_API_JWT_SECRET: ${FMSG_API_JWT_SECRET}
+      FMSG_API_PORT: ${FMSG_API_PORT:-8000}
       PGHOST: postgres
       PGPORT: 5432
       PGDATABASE: fmsgd
