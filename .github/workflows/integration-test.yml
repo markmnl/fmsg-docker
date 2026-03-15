@@ -2,6 +2,23 @@ name: Integration Test
 
 on:
   workflow_dispatch:
+    inputs:
+      fmsgd_ref:
+        description: 'fmsgd branch/ref to test'
+        required: false
+        default: 'main'
+      fmsgid_ref:
+        description: 'fmsgid branch/ref to test'
+        required: false
+        default: 'main'
+      fmsg_webapi_ref:
+        description: 'fmsg-webapi branch/ref to test'
+        required: false
+        default: 'main'
+      fmsg_cli_ref:
+        description: 'fmsg-cli branch/ref to test'
+        required: false
+        default: 'main'
 
 jobs:
   integration-test:
@@ -16,6 +33,11 @@ jobs:
 
       - name: Run integration tests
         run: bash test/run-tests.sh
+        env:
+          FMSGD_REF: ${{ github.event.inputs.fmsgd_ref }}
+          FMSGID_REF: ${{ github.event.inputs.fmsgid_ref }}
+          FMSG_WEBAPI_REF: ${{ github.event.inputs.fmsg_webapi_ref }}
+          FMSG_CLI_REF: ${{ github.event.inputs.fmsg_cli_ref }}
 
       - name: Cleanup
         if: always()

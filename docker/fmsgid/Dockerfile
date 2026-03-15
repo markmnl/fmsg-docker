@@ -1,8 +1,10 @@
 FROM golang:1.18 AS builder
 
+ARG FMSGID_REF=main
+
 WORKDIR /build
 
-RUN git clone https://github.com/markmnl/fmsgid.git . && \
+RUN git clone --branch "$FMSGID_REF" --depth 1 https://github.com/markmnl/fmsgid.git . && \
     cd src && \
     go build -o fmsgid .
 

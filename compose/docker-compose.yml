@@ -24,6 +24,8 @@ services:
     build:
       context: ../docker/fmsgid
       dockerfile: Dockerfile
+      args:
+        FMSGID_REF: ${FMSGID_REF:-main}
     restart: unless-stopped
     environment:
       GIN_MODE: ${GIN_MODE:-release}
@@ -42,6 +44,8 @@ services:
     build:
       context: ../docker/fmsgd
       dockerfile: Dockerfile
+      args:
+        FMSGD_REF: ${FMSGD_REF:-main}
     restart: unless-stopped
     environment:
       FMSG_DOMAIN: ${FMSG_DOMAIN}
@@ -68,6 +72,8 @@ services:
     build:
       context: ../docker/fmsg-webapi
       dockerfile: Dockerfile
+      args:
+        FMSG_WEBAPI_REF: ${FMSG_WEBAPI_REF:-main}
     restart: unless-stopped
     environment:
       FMSG_DOMAIN: ${FMSG_DOMAIN}

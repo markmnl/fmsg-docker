@@ -57,6 +57,12 @@ export FMSG_SKIP_DOMAIN_IP_CHECK=true
 export FMSG_API_JWT_SECRET=test-jwt-secret
 export FMSG_JWT_SECRET=test-jwt-secret
 
+# ── Pass through ref overrides for Docker build args ─────────
+export FMSGD_REF=${FMSGD_REF:-main}
+export FMSGID_REF=${FMSGID_REF:-main}
+export FMSG_WEBAPI_REF=${FMSG_WEBAPI_REF:-main}
+FMSG_CLI_REF=${FMSG_CLI_REF:-main}
+
 # ── Ensure Go is on PATH ──────────────────────────────────────
 if ! command -v go &>/dev/null && [ -x /usr/local/go/bin/go ]; then
   export PATH="/usr/local/go/bin:$PATH"
@@ -65,10 +71,10 @@ fi
 # ── Build fmsg CLI ───────────────────────────────────────────
 FMSG_BIN="$REPO_ROOT/test/.bin/fmsg"
 if [ ! -x "$FMSG_BIN" ]; then
-  echo "==> Building fmsg CLI..."
+  echo "==> Building fmsg CLI (ref: $FMSG_CLI_REF)..."
   mkdir -p "$(dirname "$FMSG_BIN")"
   FMSG_CLI_DIR=$(mktemp -d)
-  git clone --depth 1 https://github.com/markmnl/fmsg-cli.git "$FMSG_CLI_DIR"
+  git clone --branch "$FMSG_CLI_REF" --depth 1 https://github.com/markmnl/fmsg-cli.git "$FMSG_CLI_DIR"
   (cd "$FMSG_CLI_DIR" && go build -o "$FMSG_BIN" .)
   rm -rf "$FMSG_CLI_DIR"
 fi

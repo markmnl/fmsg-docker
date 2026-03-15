@@ -1,8 +1,10 @@
 FROM golang:1.25 AS builder
 
+ARG FMSG_WEBAPI_REF=main
+
 WORKDIR /build
 
-RUN git clone https://github.com/markmnl/fmsg-webapi.git . && \
+RUN git clone --branch "$FMSG_WEBAPI_REF" --depth 1 https://github.com/markmnl/fmsg-webapi.git . && \
     cd src && \
     go build -o fmsg-webapi .
 
