@@ -17,6 +17,7 @@ services:
       fmsg-test:
         aliases:
           - ${FMSG_DOMAIN}
+          - _fmsg.${FMSG_DOMAIN}
 
   fmsg-webapi:
     ports:
