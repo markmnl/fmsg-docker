@@ -48,7 +48,8 @@ create table if not exists msg_attachment (
 create or replace function notify_msg_to_insert() returns trigger as $$
 begin
     if NEW.time_delivered is null then
-        perform pg_notify('new_msg_to', NEW.msg_id::text || ',' || NEW.addr);
+        perform pg_notify('new_msg_to', NEW.msg_id::text || ',' || NEW.addr)
+        from msg where id = NEW.msg_id and time_sent is not null;
     end if;
     return NEW;
 end;
