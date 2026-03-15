@@ -133,7 +133,7 @@ docker exec -i hairpin-postgres-1 psql -U postgres < "$REPO_ROOT/test/seed-hairp
 docker exec -i example-postgres-1 psql -U postgres < "$REPO_ROOT/test/seed-example.sql"
 
 # ── Send message ─────────────────────────────────────────────
-echo "==> Sending message: alice@hairpin.local → bob@example.com"
+echo "==> Sending message: @alice@hairpin.local → @bob@example.com"
 export FMSG_API_URL=http://localhost:8181
 printf '@alice@hairpin.local\n' | fmsg login
 fmsg send '@bob@example.com' "Hello Bob, this is an integration test."
@@ -143,13 +143,13 @@ echo "==> Waiting for cross-instance delivery..."
 sleep 10
 
 # ── Read message ─────────────────────────────────────────────
-echo "==> Reading messages as bob@example.com"
+echo "==> Reading messages as @bob@example.com"
 export FMSG_API_URL=http://localhost:8182
 printf '@bob@example.com\n' | fmsg login
 MSG_OUTPUT=$(fmsg list)
 echo "$MSG_OUTPUT"
 if echo "$MSG_OUTPUT" | grep -q "No messages"; then
-  echo "FAIL: bob@example.com has no messages — delivery did not succeed"
+  echo "FAIL: @bob@example.com has no messages — delivery did not succeed"
   exit 1
 fi
 

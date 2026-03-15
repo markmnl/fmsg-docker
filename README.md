@@ -2,7 +2,7 @@
 
 # fmsg-docker
 
-Dockerised stack composing a full fmsg setup including: fmsgd, fmsgid and fmsg-webapi
+Dockerised stack composing a full fmsg setup including: [fmsgd](https://github.com/markmnl/fmsgd), [fmsgid](https://github.com/markmnl/fmsgid) and [fmsg-webapi](https://github.com/markmnl/fmsg-webapi)
 
 <div align="center">
    <picture>
