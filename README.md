@@ -1,6 +1,13 @@
 [![Integration Test](https://github.com/markmnl/fmsg-docker/actions/workflows/integration-test.yml/badge.svg)](https://github.com/markmnl/fmsg-docker/actions/workflows/integration-test.yml)
 
+
 # fmsg-docker
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/fmsg-docker-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/fmsg-docker-light.png">
+  <img align="right" alt="fmsg-docker diagram" src="docs/fmsg-docker-dark.png">
+</picture>
 
 Dockerised stack composing a full fmsg setup including: fmsgd, fmsgid and fmsg-webapi
 
