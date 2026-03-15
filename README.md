@@ -1,3 +1,5 @@
+[![Integration Test](https://github.com/markmnl/fmsg-docker/actions/workflows/integration-test.yml/badge.svg)](https://github.com/markmnl/fmsg-docker/actions/workflows/integration-test.yml)
+
 # fmsg-docker
 
 Dockerised stack composing a full fmsg setup including: fmsgd, fmsgid and fmsg-webapi
