@@ -1,4 +1,5 @@
 name: Integration Test
+run-name: "Integration Test (${{ inputs.fmsgd_ref }})"
 
 on:
   workflow_dispatch:
