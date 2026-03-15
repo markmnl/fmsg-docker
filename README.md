@@ -21,7 +21,7 @@ Dockerised stack composing a full fmsg setup including: fmsgd, fmsgid and fmsg-w
 <table>
    <tr>
       <td>
-```
+<pre><code>
 fmsg-docker/
 ├── docker/
 │   ├── fmsgd/
@@ -36,13 +36,13 @@ fmsg-docker/
 │   └── .env                  # environment configuration
 │
 └── README.md
-```
+</pre></code>
       </td>
       <td>
          <picture>
             <source media="(prefers-color-scheme: dark)" srcset="docs/fmsg-docker-dark.png">
             <source media="(prefers-color-scheme: light)" srcset="docs/fmsg-docker-light.png">
-            <img align="right" alt="fmsg-docker diagram" src="docs/fmsg-docker-dark.png">
+            <img width="396" alt="fmsg-docker diagram" src="docs/fmsg-docker-dark.png">
          </picture>
       </td>
    </tr>
