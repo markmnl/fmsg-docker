@@ -95,7 +95,7 @@ COMPOSE_PROJECT_NAME=hairpin \
 FMSG_DOMAIN=hairpin.local \
 FMSG_PORT=4931 \
 FMSG_WEBAPI_HOST_PORT=8181 \
-  docker compose -f docker-compose.yml -f ../test/docker-compose.test.yml up -d --build --wait
+  docker compose -f docker-compose.yml -f ../test/docker-compose.test.yml up -d --build --force-recreate --no-deps --wait
 
 # ── Start example.com ────────────────────────────────────────
 echo "==> Starting example.com stack..."
