@@ -101,7 +101,7 @@ The compose stack uses two Docker named volumes:
    docker compose up -d
    ```
 
-4. fmsgd will be available on port `4930` (or the port set by `FMSG_PORT` env var).
+4. fmsgd will be available on port `4930` (or the port set by `FMSG_PORT` in `.env`).
 
 
 
