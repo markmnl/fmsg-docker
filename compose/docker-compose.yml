@@ -26,6 +26,7 @@ services:
       dockerfile: Dockerfile
       args:
         FMSGID_REF: ${FMSGID_REF:-main}
+        GIT_SSL_NO_VERIFY: ${GIT_SSL_NO_VERIFY:-}
     restart: unless-stopped
     environment:
       GIN_MODE: ${GIN_MODE:-release}
@@ -46,6 +47,7 @@ services:
       dockerfile: Dockerfile
       args:
         FMSGD_REF: ${FMSGD_REF:-main}
+        GIT_SSL_NO_VERIFY: ${GIT_SSL_NO_VERIFY:-}
     restart: unless-stopped
     environment:
       FMSG_DOMAIN: ${FMSG_DOMAIN}
@@ -74,6 +76,7 @@ services:
       dockerfile: Dockerfile
       args:
         FMSG_WEBAPI_REF: ${FMSG_WEBAPI_REF:-main}
+        GIT_SSL_NO_VERIFY: ${GIT_SSL_NO_VERIFY:-}
     restart: unless-stopped
     environment:
       FMSG_DOMAIN: ${FMSG_DOMAIN}

@@ -63,6 +63,9 @@ export FMSGID_REF=${FMSGID_REF:-main}
 export FMSG_WEBAPI_REF=${FMSG_WEBAPI_REF:-main}
 FMSG_CLI_REF=${FMSG_CLI_REF:-main}
 
+# ── Pass through optional SSL verification override ──────────
+export GIT_SSL_NO_VERIFY=${GIT_SSL_NO_VERIFY:-}
+
 # ── Ensure Go is on PATH ──────────────────────────────────────
 if ! command -v go &>/dev/null && [ -x /usr/local/go/bin/go ]; then
   export PATH="/usr/local/go/bin:$PATH"
@@ -74,8 +77,14 @@ if [ ! -x "$FMSG_BIN" ]; then
   echo "==> Building fmsg CLI (ref: $FMSG_CLI_REF)..."
   mkdir -p "$(dirname "$FMSG_BIN")"
   FMSG_CLI_DIR=$(mktemp -d)
+  if [ "$GIT_SSL_NO_VERIFY" = "true" ]; then git config --global http.sslVerify false; fi
   git clone --branch "$FMSG_CLI_REF" --depth 1 https://github.com/markmnl/fmsg-cli.git "$FMSG_CLI_DIR"
-  (cd "$FMSG_CLI_DIR" && go build -o "$FMSG_BIN" .)
+  if [ "$GIT_SSL_NO_VERIFY" = "true" ]; then
+    GOINSECURE='*' GONOSUMDB='*' GONOSUMCHECK='*' GOPROXY=direct \
+      bash -c "cd \"$FMSG_CLI_DIR\" && go build -o \"$FMSG_BIN\" ."
+  else
+    (cd "$FMSG_CLI_DIR" && go build -o "$FMSG_BIN" .)
+  fi
   rm -rf "$FMSG_CLI_DIR"
 fi
 export PATH="$(dirname "$FMSG_BIN"):$PATH"

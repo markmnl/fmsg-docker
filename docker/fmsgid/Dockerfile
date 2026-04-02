@@ -1,10 +1,15 @@
 FROM golang:1.18 AS builder
 
 ARG FMSGID_REF=main
+ARG GIT_SSL_NO_VERIFY=
 
 WORKDIR /build
 
-RUN git clone --branch "$FMSGID_REF" --depth 1 https://github.com/markmnl/fmsgid.git . && \
+RUN if [ "$GIT_SSL_NO_VERIFY" = "true" ]; then \
+      git config --global http.sslVerify false; \
+      export GOINSECURE='*' GONOSUMDB='*' GONOSUMCHECK='*' GOPROXY=direct; \
+    fi && \
+    git clone --branch "$FMSGID_REF" --depth 1 https://github.com/markmnl/fmsgid.git . && \
     cd src && \
     go build -o fmsgid .
 
