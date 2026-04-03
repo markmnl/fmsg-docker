@@ -2,6 +2,7 @@ FROM golang:1.18 AS builder
 
 ARG FMSGID_REF=main
 ARG GIT_SSL_NO_VERIFY=
+ARG CACHEBUST
 
 WORKDIR /build
 

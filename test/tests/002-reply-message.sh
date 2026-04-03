@@ -6,16 +6,16 @@ set -euo pipefail
 echo "    Sending reply: @bob@example.com → @alice@hairpin.local (pid 1)"
 export FMSG_API_URL="$EXAMPLE_API_URL"
 printf '@bob@example.com\n' | fmsg login
-sleep 5
+sleep 3
 fmsg send --pid 1 '@alice@hairpin.local' "Hey there Alice, got your message!"
 
 echo "    Waiting for cross-instance delivery..."
-sleep 10
+sleep 5
 
 echo "    Reading messages as @alice@hairpin.local"
 export FMSG_API_URL="$HAIRPIN_API_URL"
 printf '@alice@hairpin.local\n' | fmsg login
-sleep 5
+sleep 3
 MSG_OUTPUT=$(fmsg list)
 echo "$MSG_OUTPUT"
 
