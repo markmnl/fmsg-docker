@@ -14,7 +14,7 @@ You will be prompted for your FMSG address (e.g. `@user@example.com`). A JWT tok
 
 | Variable      | Default                  | Description               |
 |---------------|--------------------------|---------------------------|
-| `FMSG_API_URL` | `http://localhost:4930` | Base URL of the fmsg-webapi |
+| `FMSG_API_URL` | `http://localhost:8000` | Base URL of the fmsg-webapi |
 
 ### Commands
 
