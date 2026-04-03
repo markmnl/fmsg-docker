@@ -5,8 +5,9 @@
 # Prerequisites: docker, docker compose, go (1.24+), curl
 #
 # Usage:
-#   ./test/run-tests.sh          # run tests
-#   ./test/run-tests.sh cleanup  # tear down stacks & network
+#   ./test/run-tests.sh            # run tests (start stacks fresh)
+#   ./test/run-tests.sh --no-start # run tests against already-running stacks
+#   ./test/run-tests.sh cleanup    # tear down stacks & network
 # =============================================================
 set -euo pipefail
 
@@ -31,6 +32,11 @@ cleanup() {
 if [ "${1:-}" = "cleanup" ]; then
   cleanup
   exit 0
+fi
+
+SKIP_START=false
+if [ "${1:-}" = "--no-start" ]; then
+  SKIP_START=true
 fi
 
 # ── Trap to dump logs + clean up on failure ──────────────────
@@ -73,73 +79,75 @@ fi
 
 # ── Build fmsg CLI ───────────────────────────────────────────
 FMSG_BIN="$REPO_ROOT/test/.bin/fmsg"
-if [ ! -x "$FMSG_BIN" ]; then
-  echo "==> Building fmsg CLI (ref: $FMSG_CLI_REF)..."
-  mkdir -p "$(dirname "$FMSG_BIN")"
-  FMSG_CLI_DIR=$(mktemp -d)
-  if [ "$GIT_SSL_NO_VERIFY" = "true" ]; then git config --global http.sslVerify false; fi
-  git clone --branch "$FMSG_CLI_REF" --depth 1 https://github.com/markmnl/fmsg-cli.git "$FMSG_CLI_DIR"
-  if [ "$GIT_SSL_NO_VERIFY" = "true" ]; then
-    GOINSECURE='*' GONOSUMDB='*' GONOSUMCHECK='*' GOPROXY=direct \
-      bash -c "cd \"$FMSG_CLI_DIR\" && go build -o \"$FMSG_BIN\" ."
-  else
-    (cd "$FMSG_CLI_DIR" && go build -o "$FMSG_BIN" .)
-  fi
-  rm -rf "$FMSG_CLI_DIR"
+echo "==> Building fmsg CLI (ref: $FMSG_CLI_REF)..."
+mkdir -p "$(dirname "$FMSG_BIN")"
+FMSG_CLI_DIR=$(mktemp -d)
+if [ "$GIT_SSL_NO_VERIFY" = "true" ]; then git config --global http.sslVerify false; fi
+git clone --branch "$FMSG_CLI_REF" --depth 1 https://github.com/markmnl/fmsg-cli.git "$FMSG_CLI_DIR"
+if [ "$GIT_SSL_NO_VERIFY" = "true" ]; then
+  GOINSECURE='*' GONOSUMDB='*' GONOSUMCHECK='*' GOPROXY=direct \
+    bash -c "cd \"$FMSG_CLI_DIR\" && go build -o \"$FMSG_BIN\" ."
+else
+  (cd "$FMSG_CLI_DIR" && go build -o "$FMSG_BIN" .)
 fi
+rm -rf "$FMSG_CLI_DIR"
 export PATH="$(dirname "$FMSG_BIN"):$PATH"
 echo "==> fmsg CLI: $FMSG_BIN"
 
-# ── Clean up any previous run ────────────────────────────────
-cleanup
+if [ "$SKIP_START" != "true" ]; then
+  # ── Clean up any previous run ──────────────────────────────
+  cleanup
 
-# ── Create shared Docker network ────────────────────────────
-echo "==> Creating fmsg-test network..."
-docker network create fmsg-test
+  # ── Create shared Docker network ──────────────────────────
+  echo "==> Creating fmsg-test network..."
+  docker network create fmsg-test
 
-# ── Start hairpin.local ──────────────────────────────────────
-echo "==> Starting hairpin.local stack..."
-cd "$REPO_ROOT/compose"
-COMPOSE_PROJECT_NAME=hairpin \
-FMSG_DOMAIN=hairpin.local \
-FMSG_PORT=4931 \
-FMSG_WEBAPI_HOST_PORT=8181 \
-  docker compose -f docker-compose.yml -f ../test/docker-compose.test.yml up -d --build --force-recreate --no-deps --wait
+  export CACHEBUST=$(date +%s)
 
-# ── Start example.com ────────────────────────────────────────
-echo "==> Starting example.com stack..."
-COMPOSE_PROJECT_NAME=example \
-FMSG_DOMAIN=example.com \
-FMSG_PORT=4932 \
-FMSG_WEBAPI_HOST_PORT=8182 \
-  docker compose -f docker-compose.yml -f ../test/docker-compose.test.yml up -d --build --wait
+  # ── Start hairpin.local ────────────────────────────────────
+  echo "==> Starting hairpin.local stack..."
+  cd "$REPO_ROOT/compose"
+  COMPOSE_PROJECT_NAME=hairpin \
+  FMSG_DOMAIN=hairpin.local \
+  FMSG_PORT=4931 \
+  FMSG_WEBAPI_HOST_PORT=8181 \
+    docker compose -f docker-compose.yml -f ../test/docker-compose.test.yml up -d --build --force-recreate --no-deps --wait
 
-# ── Debug: show running containers & port mappings ───────────
-echo "==> Running containers:"
-docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+  # ── Start example.com ──────────────────────────────────────
+  echo "==> Starting example.com stack..."
+  COMPOSE_PROJECT_NAME=example \
+  FMSG_DOMAIN=example.com \
+  FMSG_PORT=4932 \
+  FMSG_WEBAPI_HOST_PORT=8182 \
+    docker compose -f docker-compose.yml -f ../test/docker-compose.test.yml up -d --build --force-recreate --wait
 
-# ── Wait for webapi endpoints ────────────────────────────────
-for port in 8181 8182; do
-  echo "==> Waiting for fmsg-webapi on port $port..."
-  for i in $(seq 1 30); do
-    if curl -s -o /dev/null --connect-timeout 2 "http://localhost:$port/" 2>/dev/null; then
-      echo "    ready"
-      break
-    fi
-    if [ "$i" -eq 30 ]; then
-      echo "    timed out waiting for port $port"
-      echo "    trying verbose curl for diagnosis:"
-      curl -v "http://localhost:$port/" 2>&1 || true
-      exit 1
-    fi
-    sleep 2
+  # ── Debug: show running containers & port mappings ────────
+  echo "==> Running containers:"
+  docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+
+  # ── Wait for webapi endpoints ──────────────────────────────
+  for port in 8181 8182; do
+    echo "==> Waiting for fmsg-webapi on port $port..."
+    for i in $(seq 1 30); do
+      if curl -s -o /dev/null --connect-timeout 2 "http://localhost:$port/" 2>/dev/null; then
+        echo "    ready"
+        break
+      fi
+      if [ "$i" -eq 30 ]; then
+        echo "    timed out waiting for port $port"
+        echo "    trying verbose curl for diagnosis:"
+        curl -v "http://localhost:$port/" 2>&1 || true
+        exit 1
+      fi
+      sleep 2
+    done
   done
-done
 
-# ── Seed test users ─────────────────────────────────────────
-echo "==> Seeding users..."
-docker exec -i hairpin-postgres-1 psql -U postgres < "$REPO_ROOT/test/seed-hairpin.sql"
-docker exec -i example-postgres-1 psql -U postgres < "$REPO_ROOT/test/seed-example.sql"
+  # ── Seed test users ────────────────────────────────────────
+  echo "==> Seeding users..."
+  docker exec -i hairpin-postgres-1 psql -U postgres < "$REPO_ROOT/test/seed-hairpin.sql"
+  docker exec -i example-postgres-1 psql -U postgres < "$REPO_ROOT/test/seed-example.sql"
+fi
 
 # ── Export env vars for test scripts ──────────────────────────
 export HAIRPIN_API_URL=http://localhost:8181

@@ -27,6 +27,7 @@ services:
       args:
         FMSGID_REF: ${FMSGID_REF:-main}
         GIT_SSL_NO_VERIFY: ${GIT_SSL_NO_VERIFY:-}
+        CACHEBUST: ${CACHEBUST:-}
     restart: unless-stopped
     environment:
       GIN_MODE: ${GIN_MODE:-release}
@@ -48,6 +49,7 @@ services:
       args:
         FMSGD_REF: ${FMSGD_REF:-main}
         GIT_SSL_NO_VERIFY: ${GIT_SSL_NO_VERIFY:-}
+        CACHEBUST: ${CACHEBUST:-}
     restart: unless-stopped
     environment:
       FMSG_DOMAIN: ${FMSG_DOMAIN}
@@ -77,6 +79,7 @@ services:
       args:
         FMSG_WEBAPI_REF: ${FMSG_WEBAPI_REF:-main}
         GIT_SSL_NO_VERIFY: ${GIT_SSL_NO_VERIFY:-}
+        CACHEBUST: ${CACHEBUST:-}
     restart: unless-stopped
     environment:
       FMSG_DOMAIN: ${FMSG_DOMAIN}
