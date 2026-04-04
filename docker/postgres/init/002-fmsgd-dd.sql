@@ -18,7 +18,8 @@ create table if not exists msg (
     time_sent     	double precision,             -- time sending host recieved message for sending, message timestamp field, NULL means message not ready for sending i.e. draft
     from_addr     	varchar(255)    	not null,
     topic         	varchar(255)    	not null, 
-    type          	varchar(255)    	not null,
+    type          	varchar(255),								-- NULL when common_type is set (full string not needed on wire)
+	common_type		smallint,							-- common media type number when common type flag was set on received message, NULL otherwise; needed to faithfully reconstruct wire bytes for hash computation
     sha256        	bytea           	unique,
     psha256       	bytea,
 	size			int					not null, -- spec allows uint32 but we don't enforced by FMSG_MAX_MSG_SIZE
@@ -37,14 +38,21 @@ create table if not exists msg_to (
 );
 create index on msg_to ((lower(addr)));
 
-create table if not exists msg_add_to (
+create table if not exists msg_add_to_batch (
 	id				bigserial			primary key,
 	msg_id			bigint				not null references msg (id),
+	batch_no		int					not null,
+	sha256			bytea				not null,   -- hash of message bytes with this batch's add_to recipients
+	unique (msg_id, batch_no)
+);
+
+create table if not exists msg_add_to (
+	id				bigserial			primary key,
+	batch_id		bigint				not null references msg_add_to_batch (id),
 	addr			varchar(255)		not null,
     time_delivered  double precision,   -- if sending, time sending host recieved delivery confirmation, if receiving, time successfully received message
     time_last_attempt double precision, -- only used when sending, time of last delivery attempt if failed; otherwise null
-    response_code   smallint,		    -- only used when sending, response code of last delivery attempt if failed; otherwise null
-	unique (msg_id, addr)
+    response_code   smallint		    -- only used when sending, response code of last delivery attempt if failed; otherwise null
 );
 create index on msg_add_to ((lower(addr)));
 
@@ -75,7 +83,22 @@ create trigger trg_msg_to_insert
 
 -- notify when a new msg_add_to row is inserted with null time_delivered so the
 -- sender can pick it up immediately instead of waiting for the next poll.
+-- Must resolve msg_id through the batch table since msg_add_to references
+-- msg_add_to_batch, not msg directly.
+create or replace function notify_msg_add_to_insert() returns trigger as $$
+declare
+    v_msg_id bigint;
+begin
+    if NEW.time_delivered is null then
+        select msg_id into v_msg_id from msg_add_to_batch where id = NEW.batch_id;
+        perform pg_notify('new_msg_to', v_msg_id::text || ',' || NEW.addr)
+        from msg where id = v_msg_id and time_sent is not null;
+    end if;
+    return NEW;
+end;
+$$ language plpgsql;
+
 drop trigger if exists trg_msg_add_to_insert on msg_add_to;
 create trigger trg_msg_add_to_insert
     after insert on msg_add_to
-    for each row execute function notify_msg_to_insert();
+    for each row execute function notify_msg_add_to_insert();
