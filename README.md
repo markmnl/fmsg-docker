@@ -112,8 +112,11 @@ End-to-end tests that spin up two full stacks (`hairpin.local` and `example.com`
 **Prerequisites:** Docker, docker compose, Go 1.24+, curl.
 
 ```bash
-# Run tests
+# Run tests (starts stacks fresh)
 ./test/run-tests.sh
+
+# Run tests against already-running stacks (skips stack teardown, startup, and seeding)
+./test/run-tests.sh --no-start
 
 # Tear down stacks & network
 ./test/run-tests.sh cleanup

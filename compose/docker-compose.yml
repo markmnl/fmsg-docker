@@ -56,6 +56,7 @@ services:
       FMSG_DATA_DIR: /opt/fmsg/data
       FMSG_ID_URL: http://fmsgid:${FMSGID_PORT:-8080}
       FMSG_SKIP_DOMAIN_IP_CHECK: ${FMSG_SKIP_DOMAIN_IP_CHECK:-false}
+      FMSG_SKIP_AUTHORISED_IPS: ${FMSG_SKIP_AUTHORISED_IPS:-false}
       PGHOST: postgres
       PGPORT: 5432
       PGDATABASE: fmsgd

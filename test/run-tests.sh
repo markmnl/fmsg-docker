@@ -60,6 +60,7 @@ export FMSGD_READER_PGPASSWORD=testfmsgdreader
 export FMSGID_WRITER_PGPASSWORD=testfmsgidwriter
 export FMSGID_READER_PGPASSWORD=testfmsgidreader
 export FMSG_SKIP_DOMAIN_IP_CHECK=true
+export FMSG_SKIP_AUTHORISED_IPS=true
 export FMSG_API_JWT_SECRET=test-jwt-secret
 export FMSG_JWT_SECRET=test-jwt-secret
 
@@ -182,6 +183,7 @@ echo "========================================"
 if [ "$FAILED" -gt 0 ]; then
   echo ""
   printf "Failed tests:\n$FAILURES"
+  on_error
   exit 1
 fi
 
