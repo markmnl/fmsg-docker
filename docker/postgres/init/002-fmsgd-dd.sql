@@ -17,6 +17,7 @@ create table if not exists msg (
 	is_deflate		boolean				not null default false,
     time_sent     	double precision,             -- time sending host recieved message for sending, message timestamp field, NULL means message not ready for sending i.e. draft
     from_addr     	varchar(255)    	not null,
+    add_to_from   	varchar(255),
     topic         	varchar(255)    	not null, 
     type          	varchar(255)    	not null,
     sha256        	bytea           	unique,
@@ -61,11 +62,6 @@ create table if not exists msg_attachment (
     primary key (msg_id, filename)
 );
 
--- migrations for existing databases
-ALTER TABLE msg_attachment ADD COLUMN IF NOT EXISTS position smallint not null default 0;
-ALTER TABLE msg_attachment ADD COLUMN IF NOT EXISTS flags smallint not null default 0;
-ALTER TABLE msg_attachment ADD COLUMN IF NOT EXISTS type varchar(255) not null default 'application/octet-stream';
-
 -- notify when a new msg_to row is inserted with null time_delivered so the
 -- sender can pick it up immediately instead of waiting for the next poll.
 create or replace function notify_msg_to_insert() returns trigger as $$
@@ -89,4 +85,3 @@ drop trigger if exists trg_msg_add_to_insert on msg_add_to;
 create trigger trg_msg_add_to_insert
     after insert on msg_add_to
     for each row execute function notify_msg_to_insert();
-
