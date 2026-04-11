@@ -7,11 +7,7 @@ set -euo pipefail
 echo "    Sending initial message: @alice@hairpin.local → @bob@example.com"
 export FMSG_API_URL="$HAIRPIN_API_URL"
 printf '@alice@hairpin.local\n' | fmsg login
-sleep 3
 fmsg send '@bob@example.com' "Hello Bob, this is the add-to integration test."
-
-echo "    Waiting for delivery..."
-sleep 3
 
 echo "    Getting message ID from alice's sent messages"
 MSG_ID=$(fmsg list | grep -oE '\b[0-9]+\b' | head -1)
@@ -25,12 +21,11 @@ echo "    Adding @carol@example.com as recipient via add-to $MSG_ID"
 fmsg add-to "$MSG_ID" '@carol@example.com'
 
 echo "    Waiting for cross-instance delivery..."
-sleep 3
-
-echo "    Reading messages as @carol@example.com"
 export FMSG_API_URL="$EXAMPLE_API_URL"
 printf '@carol@example.com\n' | fmsg login
-sleep 3
+fmsg wait --timeout 15 >/dev/null
+
+echo "    Reading messages as @carol@example.com"
 MSG_OUTPUT=$(fmsg list)
 echo "$MSG_OUTPUT"
 
