@@ -158,7 +158,7 @@ export EXAMPLE_API_URL=http://localhost:8182
 TESTS_DIR="$SCRIPT_DIR/tests"
 PASSED=0
 FAILED=0
-FAILURES=""
+FAILED_TESTS=()
 
 for test_script in "$TESTS_DIR"/*.sh; do
   [ -f "$test_script" ] || continue
@@ -171,7 +171,7 @@ for test_script in "$TESTS_DIR"/*.sh; do
   else
     echo "    FAILED: $test_name"
     FAILED=$((FAILED + 1))
-    FAILURES="$FAILURES  - $test_name\n"
+    FAILED_TESTS+=("$test_name")
   fi
 done
 
@@ -182,7 +182,10 @@ echo "========================================"
 
 if [ "$FAILED" -gt 0 ]; then
   echo ""
-  printf "Failed tests:\n$FAILURES"
+  echo "Failed tests:"
+  for failed_test in "${FAILED_TESTS[@]}"; do
+    echo "  - $failed_test"
+  done
   on_error
   exit 1
 fi
