@@ -7,6 +7,7 @@
 # Usage:
 #   ./test/run-tests.sh            # run tests (start stacks fresh)
 #   ./test/run-tests.sh --no-start # run tests against already-running stacks
+#   ./test/run-tests.sh --rebuild-cli # force rebuilding fmsg CLI
 #   ./test/run-tests.sh cleanup    # tear down stacks & network
 # =============================================================
 set -euo pipefail
@@ -29,15 +30,31 @@ cleanup() {
   echo "==> Cleanup complete."
 }
 
-if [ "${1:-}" = "cleanup" ]; then
-  cleanup
-  exit 0
-fi
-
 SKIP_START=false
-if [ "${1:-}" = "--no-start" ]; then
-  SKIP_START=true
-fi
+FORCE_REBUILD_CLI=false
+
+for arg in "$@"; do
+  case "$arg" in
+    cleanup)
+      cleanup
+      exit 0
+      ;;
+    --no-start)
+      SKIP_START=true
+      ;;
+    --rebuild-cli)
+      FORCE_REBUILD_CLI=true
+      ;;
+    "")
+      ;;
+    *)
+      echo "Unknown argument: $arg"
+      echo "Usage: ./test/run-tests.sh [--no-start] [--rebuild-cli]"
+      echo "       ./test/run-tests.sh cleanup"
+      exit 1
+      ;;
+  esac
+done
 
 # ── Trap to dump logs + clean up on failure ──────────────────
 on_error() {
@@ -80,18 +97,35 @@ fi
 
 # ── Build fmsg CLI ───────────────────────────────────────────
 FMSG_BIN="$REPO_ROOT/test/.bin/fmsg"
-echo "==> Building fmsg CLI (ref: $FMSG_CLI_REF)..."
+FMSG_BIN_REF_FILE="$REPO_ROOT/test/.bin/.fmsg-cli-ref"
+NEED_BUILD_CLI=true
+
 mkdir -p "$(dirname "$FMSG_BIN")"
-FMSG_CLI_DIR=$(mktemp -d)
-if [ "$GIT_SSL_NO_VERIFY" = "true" ]; then git config --global http.sslVerify false; fi
-git clone --branch "$FMSG_CLI_REF" --depth 1 https://github.com/markmnl/fmsg-cli.git "$FMSG_CLI_DIR"
-if [ "$GIT_SSL_NO_VERIFY" = "true" ]; then
-  GOINSECURE='*' GONOSUMDB='*' GONOSUMCHECK='*' GOPROXY=direct \
-    bash -c "cd \"$FMSG_CLI_DIR\" && go build -o \"$FMSG_BIN\" ."
-else
-  (cd "$FMSG_CLI_DIR" && go build -o "$FMSG_BIN" .)
+
+if [ "$FORCE_REBUILD_CLI" != "true" ] && [ -x "$FMSG_BIN" ] && [ -f "$FMSG_BIN_REF_FILE" ]; then
+  BUILT_CLI_REF="$(cat "$FMSG_BIN_REF_FILE")"
+  if [ "$BUILT_CLI_REF" = "$FMSG_CLI_REF" ]; then
+    NEED_BUILD_CLI=false
+  fi
 fi
-rm -rf "$FMSG_CLI_DIR"
+
+if [ "$NEED_BUILD_CLI" = "true" ]; then
+  echo "==> Building fmsg CLI (ref: $FMSG_CLI_REF)..."
+  FMSG_CLI_DIR=$(mktemp -d)
+  if [ "$GIT_SSL_NO_VERIFY" = "true" ]; then git config --global http.sslVerify false; fi
+  git clone --branch "$FMSG_CLI_REF" --depth 1 https://github.com/markmnl/fmsg-cli.git "$FMSG_CLI_DIR"
+  if [ "$GIT_SSL_NO_VERIFY" = "true" ]; then
+    GOINSECURE='*' GONOSUMDB='*' GONOSUMCHECK='*' GOPROXY=direct \
+      bash -c "cd \"$FMSG_CLI_DIR\" && go build -o \"$FMSG_BIN\" ."
+  else
+    (cd "$FMSG_CLI_DIR" && go build -o "$FMSG_BIN" .)
+  fi
+  rm -rf "$FMSG_CLI_DIR"
+  echo "$FMSG_CLI_REF" > "$FMSG_BIN_REF_FILE"
+else
+  echo "==> Using cached fmsg CLI (ref: $FMSG_CLI_REF)"
+fi
+
 export PATH="$(dirname "$FMSG_BIN"):$PATH"
 echo "==> fmsg CLI: $FMSG_BIN"
 

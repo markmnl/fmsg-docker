@@ -51,14 +51,16 @@ wait_for_message_id_by_data() {
   local tmp_file
   local attempt
   local ids
+  local ids_reversed
   local id
 
   tmp_file=$(mktemp)
 
   for attempt in $(seq 1 "$timeout"); do
-    ids=$(fmsg list --limit 20 2>/dev/null | sed -n 's/^ID: \([0-9][0-9]*\).*/\1/p')
+    ids=$(fmsg list --limit 1 2>/dev/null | sed -n 's/^ID: \([0-9][0-9]*\).*/\1/p')
+    ids_reversed=$(echo "$ids" | awk 'NF{a[++n]=$0} END{for(i=n;i>=1;i--) print a[i]}')
 
-    for id in $ids; do
+    for id in $ids_reversed; do
       if fmsg get-data "$id" "$tmp_file" >/dev/null 2>&1 && grep -Fxq "$expected_data" "$tmp_file"; then
         rm -f "$tmp_file"
         echo "$id"
