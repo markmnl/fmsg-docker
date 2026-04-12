@@ -50,13 +50,17 @@ wait_for_message_id_by_data() {
   local timeout="${2:-15}"
   local tmp_file
   local attempt
+  local wait_timeout
+  local list_output
   local ids
   local id
+  local last_id
 
   tmp_file=$(mktemp)
 
   for attempt in $(seq 1 "$timeout"); do
-    ids=$(fmsg list --limit 20 2>/dev/null | sed -n 's/^ID: \([0-9][0-9]*\).*/\1/p')
+    list_output=$(fmsg ls --limit 20 2>/dev/null || true)
+    ids=$(echo "$list_output" | sed -n 's/^ID: \([0-9][0-9]*\).*/\1/p')
 
     for id in $ids; do
       if fmsg get-data "$id" "$tmp_file" >/dev/null 2>&1 && grep -Fxq "$expected_data" "$tmp_file"; then
@@ -66,7 +70,17 @@ wait_for_message_id_by_data() {
       fi
     done
 
-    sleep 1
+    last_id=$(echo "$ids" | head -1)
+    if [ -z "$last_id" ]; then
+      last_id=0
+    fi
+
+    wait_timeout=$((timeout - attempt + 1))
+    if [ "$wait_timeout" -lt 1 ]; then
+      wait_timeout=1
+    fi
+
+    fmsg wait --since-id "$last_id" --timeout "$wait_timeout" >/dev/null 2>&1 || true
   done
 
   rm -f "$tmp_file"
