@@ -77,7 +77,15 @@ get_auth_token() {
   local auth_file
   local token
 
-  auth_file="${XDG_CONFIG_HOME:-$HOME/.config}/fmsg/auth.json"
+  # Prefer explicit XDG path, then Windows APPDATA, then default ~/.config.
+  if [ -n "${XDG_CONFIG_HOME:-}" ] && [ -f "$XDG_CONFIG_HOME/fmsg/auth.json" ]; then
+    auth_file="$XDG_CONFIG_HOME/fmsg/auth.json"
+  elif [ -n "${APPDATA:-}" ] && [ -f "$APPDATA/fmsg/auth.json" ]; then
+    auth_file="$APPDATA/fmsg/auth.json"
+  else
+    auth_file="$HOME/.config/fmsg/auth.json"
+  fi
+
   token=$(sed -n 's/^[[:space:]]*"token":[[:space:]]*"\([^"]*\)".*/\1/p' "$auth_file" | head -1)
 
   if [ -z "$token" ]; then
