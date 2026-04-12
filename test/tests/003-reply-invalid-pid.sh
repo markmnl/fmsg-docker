@@ -4,8 +4,7 @@ set -euo pipefail
 
 echo "    Sending reply with invalid pid 99: @bob@example.com → @alice@hairpin.local"
 export FMSG_API_URL="$EXAMPLE_API_URL"
-printf '@bob@example.com\n' | fmsg login
-sleep 3
+fmsg login '@bob@example.com'
 
 if fmsg send --pid 99 '@alice@hairpin.local' "This should fail" 2>/dev/null; then
   echo "    FAIL: send with invalid pid 99 succeeded but should have failed"

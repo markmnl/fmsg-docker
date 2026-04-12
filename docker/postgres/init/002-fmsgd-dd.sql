@@ -85,3 +85,4 @@ drop trigger if exists trg_msg_add_to_insert on msg_add_to;
 create trigger trg_msg_add_to_insert
     after insert on msg_add_to
     for each row execute function notify_msg_to_insert();
+

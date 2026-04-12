@@ -4,37 +4,47 @@
 # and verify carol receives the message.
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../test-lib.sh
+source "$SCRIPT_DIR/../test-lib.sh"
+
+TEST_TOKEN="$(date +%s)-$$"
+MESSAGE_TEXT="Hello Bob, this is the add-to integration test. [$TEST_TOKEN]"
+
 echo "    Sending initial message: @alice@hairpin.local → @bob@example.com"
 export FMSG_API_URL="$HAIRPIN_API_URL"
-printf '@alice@hairpin.local\n' | fmsg login
-sleep 3
-fmsg send '@bob@example.com' "Hello Bob, this is the add-to integration test."
+fmsg login '@alice@hairpin.local'
+SEND_OUTPUT=$(fmsg send '@bob@example.com' "$MESSAGE_TEXT")
+echo "$SEND_OUTPUT"
 
-echo "    Waiting for delivery..."
-sleep 3
-
-echo "    Getting message ID from alice's sent messages"
-MSG_ID=$(fmsg list | grep -oE '\b[0-9]+\b' | head -1)
+echo "    Getting message ID from send output"
+MSG_ID=$(extract_send_id "$SEND_OUTPUT")
 if [ -z "$MSG_ID" ]; then
-  echo "    FAIL: could not determine message ID from fmsg list"
-  exit 1
+  fail_test "could not determine message ID from fmsg send output"
 fi
 echo "    Using message ID: $MSG_ID"
 
+echo "    Waiting for bob to receive the original message"
+export FMSG_API_URL="$EXAMPLE_API_URL"
+fmsg login '@bob@example.com'
+ORIGINAL_MSG_ID=$(wait_for_message_id_by_data "$MESSAGE_TEXT")
+echo "    Bob received original message ID: $ORIGINAL_MSG_ID"
+
 echo "    Adding @carol@example.com as recipient via add-to $MSG_ID"
+export FMSG_API_URL="$HAIRPIN_API_URL"
+fmsg login '@alice@hairpin.local'
 fmsg add-to "$MSG_ID" '@carol@example.com'
 
 echo "    Waiting for cross-instance delivery..."
-sleep 3
-
-echo "    Reading messages as @carol@example.com"
 export FMSG_API_URL="$EXAMPLE_API_URL"
-printf '@carol@example.com\n' | fmsg login
-sleep 3
-MSG_OUTPUT=$(fmsg list)
+fmsg login '@carol@example.com'
+RECEIVED_MSG_ID=$(wait_for_message_id_by_data "$MESSAGE_TEXT")
+echo "    Using received message ID: $RECEIVED_MSG_ID"
+
+echo "    Reading received message as @carol@example.com"
+MSG_OUTPUT=$(fmsg get "$RECEIVED_MSG_ID")
 echo "$MSG_OUTPUT"
 
-if echo "$MSG_OUTPUT" | grep -q "No messages"; then
-  echo "    FAIL: @carol@example.com has no messages — add-to delivery did not succeed"
-  exit 1
+if ! echo "$MSG_OUTPUT" | grep -q '^From: @alice@hairpin.local$'; then
+  fail_test "received message $RECEIVED_MSG_ID was not from @alice@hairpin.local"
 fi
