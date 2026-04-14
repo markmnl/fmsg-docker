@@ -27,6 +27,7 @@ cleanup() {
     docker compose -f docker-compose.yml -f ../test/docker-compose.test.yml down -v 2>/dev/null || true
 
   docker network rm fmsg-test 2>/dev/null || true
+  rm -rf "$REPO_ROOT/test/.tls"
   echo "==> Cleanup complete."
 }
 
@@ -80,6 +81,7 @@ export FMSG_SKIP_DOMAIN_IP_CHECK=true
 export FMSG_SKIP_AUTHORISED_IPS=true
 export FMSG_API_JWT_SECRET=test-jwt-secret
 export FMSG_JWT_SECRET=test-jwt-secret
+export FMSG_TLS_INSECURE_SKIP_VERIFY=true
 
 # ── Pass through ref overrides for Docker build args ─────────
 export FMSGD_REF=${FMSGD_REF:-main}
@@ -136,6 +138,20 @@ if [ "$SKIP_START" != "true" ]; then
   # ── Create shared Docker network ──────────────────────────
   echo "==> Creating fmsg-test network..."
   docker network create fmsg-test
+
+  # ── Generate self-signed TLS certificates ─────────────────
+  echo "==> Generating self-signed TLS certificates..."
+  TLS_DIR="$REPO_ROOT/test/.tls"
+  mkdir -p "$TLS_DIR"
+  for domain in hairpin.local example.com; do
+    openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
+      -keyout "$TLS_DIR/fmsg.${domain}.key" \
+      -out "$TLS_DIR/fmsg.${domain}.crt" \
+      -days 1 -nodes \
+      -subj "/CN=fmsg.${domain}" \
+      -addext "subjectAltName=DNS:fmsg.${domain}"
+  done
+  chmod 644 "$TLS_DIR"/*.key
 
   export CACHEBUST=$(date +%s)
 

@@ -12,12 +12,18 @@
 services:
 
   fmsgd:
+    environment:
+      FMSG_TLS_CERT: /opt/fmsg/tls/fmsg.${FMSG_DOMAIN}.crt
+      FMSG_TLS_KEY: /opt/fmsg/tls/fmsg.${FMSG_DOMAIN}.key
+      FMSG_TLS_INSECURE_SKIP_VERIFY: "true"
+    volumes:
+      - ../test/.tls:/opt/fmsg/tls:ro
     networks:
       default:
       fmsg-test:
         aliases:
           - ${FMSG_DOMAIN}
-          - _fmsg.${FMSG_DOMAIN}
+          - fmsg.${FMSG_DOMAIN}
 
   fmsg-webapi:
     ports:
