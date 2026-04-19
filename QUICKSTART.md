@@ -2,9 +2,9 @@
 
 This quickstart gets the docker compose stack from this repository up and running on your server. TLS provisioning is included and an HTTPS API is exposed so you can start sending and receiving fmsg messages for your domain. TCP port 4930 is also exposed for fmsg host-to-host communication.
 
-To learn more about fmsg, see the documentation repository: (fmsg)[https://github.com/markmnl/fmsg].
+To learn more about fmsg, see the documentation repository: [fmsg](https://github.com/markmnl/fmsg).
 
-Read the (README.md)[https://github.com/markmnl/fmsg-docker] of this repo for more about settings and environment being used in this quickstart.
+Read the [README.md](https://github.com/markmnl/fmsg-docker) of this repo for more about settings and environment being used in this quickstart.
 
 ## Requirements
 
@@ -84,11 +84,10 @@ address,display_name,accepting_new,limit_recv_size_total,limit_recv_size_per_msg
 @alice@example.com,Alice,true,102400000,10240,102400,1000,102400000,10240,102400,1000
 ```
 
-You can copy it into the volume with:
+You can copy it into the volume with (file changes will sync automatically):
 
 ```sh
 docker compose cp addresses.csv fmsgid:/opt/fmsgid/data/addresses.csv
-docker compose restart fmsgid
 ```
 
 ### Connect a Client
