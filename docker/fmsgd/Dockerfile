@@ -1,20 +1,18 @@
 FROM golang:1.25 AS builder
 
 ARG FMSGD_REF=main
-ARG GIT_SSL_NO_VERIFY=
 ARG CACHEBUST
 
 WORKDIR /build
 
-RUN if [ "$GIT_SSL_NO_VERIFY" = "true" ]; then \
-      git config --global http.sslVerify false; \
-      export GOINSECURE='*' GONOSUMDB='*' GONOSUMCHECK='*' GOPROXY=direct; \
-    fi && \
-    git clone --branch "$FMSGD_REF" --depth 1 https://github.com/markmnl/fmsgd.git . && \
+RUN git clone --branch "$FMSGD_REF" --depth 1 https://github.com/markmnl/fmsgd.git . && \
     cd src && \
     go build -o fmsgd .
 
 FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN useradd -r -s /bin/false fmsg
 

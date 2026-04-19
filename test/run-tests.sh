@@ -89,9 +89,6 @@ export FMSGID_REF=${FMSGID_REF:-main}
 export FMSG_WEBAPI_REF=${FMSG_WEBAPI_REF:-main}
 FMSG_CLI_REF=${FMSG_CLI_REF:-main}
 
-# ── Pass through optional SSL verification override ──────────
-export GIT_SSL_NO_VERIFY=${GIT_SSL_NO_VERIFY:-}
-
 # ── Ensure Go is on PATH ──────────────────────────────────────
 if ! command -v go &>/dev/null && [ -x /usr/local/go/bin/go ]; then
   export PATH="/usr/local/go/bin:$PATH"
@@ -114,14 +111,8 @@ fi
 if [ "$NEED_BUILD_CLI" = "true" ]; then
   echo "==> Building fmsg CLI (ref: $FMSG_CLI_REF)..."
   FMSG_CLI_DIR=$(mktemp -d)
-  if [ "$GIT_SSL_NO_VERIFY" = "true" ]; then git config --global http.sslVerify false; fi
   git clone --branch "$FMSG_CLI_REF" --depth 1 https://github.com/markmnl/fmsg-cli.git "$FMSG_CLI_DIR"
-  if [ "$GIT_SSL_NO_VERIFY" = "true" ]; then
-    GOINSECURE='*' GONOSUMDB='*' GONOSUMCHECK='*' GOPROXY=direct \
-      bash -c "cd \"$FMSG_CLI_DIR\" && go build -o \"$FMSG_BIN\" ."
-  else
-    (cd "$FMSG_CLI_DIR" && go build -o "$FMSG_BIN" .)
-  fi
+  (cd "$FMSG_CLI_DIR" && go build -o "$FMSG_BIN" .)
   rm -rf "$FMSG_CLI_DIR"
   echo "$FMSG_CLI_REF" > "$FMSG_BIN_REF_FILE"
 else
@@ -148,7 +139,7 @@ if [ "$SKIP_START" != "true" ]; then
       -keyout "$TLS_DIR/fmsg.${domain}.key" \
       -out "$TLS_DIR/fmsg.${domain}.crt" \
       -days 1 -nodes \
-      -subj "/CN=fmsg.${domain}" \
+      -subj "//CN=fmsg.${domain}" \
       -addext "subjectAltName=DNS:fmsg.${domain}"
   done
   chmod 644 "$TLS_DIR"/*.key
