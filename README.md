@@ -54,12 +54,14 @@ fmsg-docker/
 
 ## Persistent Data Volumes
 
-The compose stack uses two Docker named volumes:
+The compose stack uses Docker named volumes:
 
-| Volume          | Mounted at             | Used by              | Contents                          |
-|-----------------|------------------------|----------------------|-----------------------------------|
-| `postgres_data` | `/var/lib/postgresql/data` | postgres          | All PostgreSQL databases and WAL  |
-| `fmsg_data`     | `/opt/fmsg/data`       | fmsgd, fmsg-webapi   | fmsg host data (keys, messages)   |
+| Volume          | Mounted at                 | Used by              | Contents                          |
+|-----------------|----------------------------|----------------------|-----------------------------------|
+| `postgres_data` | `/var/lib/postgresql/data`  | postgres             | All PostgreSQL databases and WAL  |
+| `fmsg_data`     | `/opt/fmsg/data`            | fmsgd, fmsg-webapi   | fmsg host data (keys, messages)   |
+| `fmsgid_data`   | `/opt/fmsgid/data`          | fmsgid               | fmsgid data (addresses CSV)       |
+| `letsencrypt`   | `/etc/letsencrypt`          | certbot, fmsgd, fmsg-webapi | Let's Encrypt TLS certificates |
 
 > **WARNING:** These volumes contain **sensitive application data** including user identities and messages. Restrict access to the Docker host and the volumes directory accordingly.
 >
@@ -77,6 +79,8 @@ The compose stack uses two Docker named volumes:
 
    ```
    FMSG_DOMAIN=example.com
+   CERTBOT_EMAIL=admin@example.com
+   FMSG_API_JWT_SECRET=<secret>
    FMSGD_WRITER_PGPASSWORD=<strong random password>
    FMSGID_WRITER_PGPASSWORD=<strong random password>
    ```
@@ -133,6 +137,8 @@ Configure these in `compose/.env`. Variables marked **required** have no default
 | Variable                     | Required | Default   | Description                                              |
 |------------------------------|----------|-----------|----------------------------------------------------------|
 | `FMSG_DOMAIN`                | yes      |           | The domain name for your fmsg host                       |
+| `CERTBOT_EMAIL`              | yes      |           | Email address for Let's Encrypt certificate registration |
+| `FMSG_API_JWT_SECRET`        | yes      |           | HMAC secret for fmsg-webapi JWT validation               |
 | `FMSG_PORT`                  | no       | `4930`    | Host port fmsgd listens on                               |
 | `FMSGID_PORT`                | no       | `8080`    | Internal port for the fmsgid API                         |
 | `GIN_MODE`                   | no       | `release` | Gin framework mode for fmsgid (`release` or `debug`)    |
