@@ -39,7 +39,6 @@ services:
       dockerfile: Dockerfile
       args:
         FMSGID_REF: ${FMSGID_REF:-main}
-        GIT_SSL_NO_VERIFY: ${GIT_SSL_NO_VERIFY:-}
         CACHEBUST: ${CACHEBUST:-}
     restart: unless-stopped
     environment:
@@ -64,7 +63,6 @@ services:
       dockerfile: Dockerfile
       args:
         FMSGD_REF: ${FMSGD_REF:-main}
-        GIT_SSL_NO_VERIFY: ${GIT_SSL_NO_VERIFY:-}
         CACHEBUST: ${CACHEBUST:-}
     restart: unless-stopped
     environment:
@@ -100,7 +98,6 @@ services:
       dockerfile: Dockerfile
       args:
         FMSG_WEBAPI_REF: ${FMSG_WEBAPI_REF:-main}
-        GIT_SSL_NO_VERIFY: ${GIT_SSL_NO_VERIFY:-}
         CACHEBUST: ${CACHEBUST:-}
     restart: unless-stopped
     environment:

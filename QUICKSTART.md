@@ -50,11 +50,13 @@ FMSGID_WRITER_PGPASSWORD=<strong-password>
 ```
 
 _NOTE_
-* FMSG_DOMAIN is the domain part of fmsg addresses e.g. in `@user@example.com` would be `example.com`. This server you are setting up is located at the subdomain `fmsg.<your-domain>` but addresses will be at `<your-domain>`, you should only specify `<your-domain>` for FMSG_DOMAIN.
+* FMSG_DOMAIN is the domain part of fmsg addresses e.g. in `@user@example.com` would be `example.com`. This server you are setting up is located at the subdomain `fmsg.<your-domain>` but addresses will be at `<your-domain>`, you should only specify `<your-domain>` for FMSG_DOMAIN here.
 * CERTBOT_EMAIL is an email address supplied to [Let's Encrypt](https://letsencrypt.org/) for e.g. TLS expiry warnings.
 * For all secrets and passwords env vars create your own.
 
 Start the stack for the first time from `compose/` and pass the one-time init passwords on the command line (keep these secret, keep them safe):
+
+(might require sudo)
 
 ```sh
 cd compose
@@ -66,7 +68,7 @@ docker compose up -d
 
 If `fmsgd` is running and port `4930` is reachable on `fmsg.<your domain>`, the host is up.
 
-On first start, certbot will request Let's Encrypt TLS certificates for `fmsg.<your-domain>` and `fmsgapi.<your-domain>`. If certificate issuance fails (e.g. the domains do not resolve to the server or port 80 is blocked), the stack will not start. Certificates are persisted in a Docker volume and reused on subsequent starts.
+On first start, certbot will request Let's Encrypt TLS certificates for `fmsg.<your-domain>` and `fmsgapi.<your-domain>`. If certificate issuance fails (e.g. the domains do not resolve to the server or port 80 is blocked), the stack will not start. Certificates are persisted in a Docker volume and reused on subsequent starts. Once certificates are issued port 80 is no longer needed until certificates need to be renewed - usually 90 days.
 
 
 ## Next Steps
