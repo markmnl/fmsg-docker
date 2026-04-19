@@ -4,6 +4,8 @@ This quickstart gets the docker compose stack from this repository up and runnin
 
 To learn more about fmsg, see the documentation repository: (fmsg)[https://github.com/markmnl/fmsg].
 
+Read the (README.md)[https://github.com/markmnl/fmsg-docker] of this repo for more about settings and environment being used in this quickstart.
+
 ## Requirements
 
 1. A domain you control, e.g `example.com`
