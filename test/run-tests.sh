@@ -148,7 +148,7 @@ if [ "$SKIP_START" != "true" ]; then
       -keyout "$TLS_DIR/fmsg.${domain}.key" \
       -out "$TLS_DIR/fmsg.${domain}.crt" \
       -days 1 -nodes \
-      -subj "/CN=fmsg.${domain}" \
+      -subj "//CN=fmsg.${domain}" \
       -addext "subjectAltName=DNS:fmsg.${domain}"
   done
   chmod 644 "$TLS_DIR"/*.key

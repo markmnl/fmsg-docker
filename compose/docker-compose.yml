@@ -1,5 +1,18 @@
 services:
 
+  certbot:
+    image: certbot/certbot
+    restart: "no"
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    environment:
+      FMSG_DOMAIN: ${FMSG_DOMAIN}
+      CERTBOT_EMAIL: ${CERTBOT_EMAIL}
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - ../docker/certbot/entrypoint.sh:/entrypoint.sh:ro
+    ports:
+      - "80:80"
+
   postgres:
     image: postgres:18-alpine
     restart: unless-stopped
@@ -32,12 +45,15 @@ services:
     environment:
       GIN_MODE: ${GIN_MODE:-release}
       FMSGID_PORT: ${FMSGID_PORT:-8080}
+      FMSGID_CSV_FILE: /opt/fmsgid/data/addresses.csv
       PGHOST: postgres
       PGPORT: 5432
       PGDATABASE: fmsgid
       PGUSER: fmsgid_writer
       PGPASSWORD: ${FMSGID_WRITER_PGPASSWORD}
       PGSSLMODE: disable
+    volumes:
+      - fmsgid_data:/opt/fmsgid/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,8 +73,8 @@ services:
       FMSG_ID_URL: http://fmsgid:${FMSGID_PORT:-8080}
       FMSG_SKIP_DOMAIN_IP_CHECK: ${FMSG_SKIP_DOMAIN_IP_CHECK:-false}
       FMSG_SKIP_AUTHORISED_IPS: ${FMSG_SKIP_AUTHORISED_IPS:-false}
-      FMSG_TLS_CERT: ${FMSG_TLS_CERT:-}
-      FMSG_TLS_KEY: ${FMSG_TLS_KEY:-}
+      FMSG_TLS_CERT: /etc/letsencrypt/live/fmsg.${FMSG_DOMAIN}/fullchain.pem
+      FMSG_TLS_KEY: /etc/letsencrypt/live/fmsg.${FMSG_DOMAIN}/privkey.pem
       PGHOST: postgres
       PGPORT: 5432
       PGDATABASE: fmsgd
@@ -67,9 +83,12 @@ services:
       PGSSLMODE: disable
     volumes:
       - fmsg_data:/opt/fmsg/data
+      - letsencrypt:/etc/letsencrypt:ro
     ports:
       - "${FMSG_PORT:-4930}:4930"
     depends_on:
+      certbot:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       fmsgid:
@@ -94,14 +113,25 @@ services:
       PGDATABASE: fmsgd
       PGUSER: fmsgd_writer
       PGPASSWORD: ${FMSGD_WRITER_PGPASSWORD}
+      FMSG_TLS_CERT: /etc/letsencrypt/live/fmsgapi.${FMSG_DOMAIN}/fullchain.pem
+      FMSG_TLS_KEY: /etc/letsencrypt/live/fmsgapi.${FMSG_DOMAIN}/privkey.pem
       FMSG_DATA_DIR: /opt/fmsg/data
       PGSSLMODE: disable
     volumes:
       - fmsg_data:/opt/fmsg/data
+      - letsencrypt:/etc/letsencrypt:ro
+    ports:
+      - "443:443"
     depends_on:
-      - fmsgd
-      - fmsgid
+      certbot:
+        condition: service_completed_successfully
+      fmsgd:
+        condition: service_started
+      fmsgid:
+        condition: service_started
 
 volumes:
   postgres_data:
   fmsg_data:
+  fmsgid_data:
+  letsencrypt:

@@ -11,6 +11,10 @@
 
 services:
 
+  certbot:
+    entrypoint: ["true"]
+    restart: "no"
+
   fmsgd:
     environment:
       FMSG_TLS_CERT: /opt/fmsg/tls/fmsg.${FMSG_DOMAIN}.crt
