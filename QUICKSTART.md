@@ -1,13 +1,17 @@
 # Quickstart - Setting up an fmsg host with fmsg-docker
 
+This quickstart gets the docker compose stack from this repository up and running on your server. TLS provisioning is included and an HTTPS API is exposed so you can start sending and receiving fmsg messages for your domain. TCP port 4930 is also exposed for fmsg host-to-host communication.
+
+To learn more about fmsg, see the documentation repository: (fmsg)[https://github.com/markmnl/fmsg].
+
 ## Requirements
 
 1. A domain you control, e.g `example.com`
-2. A public IP
-3. A server with Docker and Docker Compose
-4. TCP port `4930` open to the internet
-5. TCP port `443` open to the internet (fmsg-webapi HTTPS)
-6. TCP port `80` open to the internet (only first start - required for initial Let's Encrypt certificate issuance)
+2. A server with a public IP and
+    1. TCP port `4930` open to the internet (fmsg TLS)
+    2. TCP port `443` open to the internet (fmsg-webapi HTTPS)
+    3. TCP port `80` open to the internet (only first start - required for initial Let's Encrypt certificate issuance)
+3. Docker and Docker Compose
 
 ## Steps
 
@@ -20,12 +24,12 @@ git clone https://github.com/markmnl/fmsg-docker.git
 
 ### 1. Configure DNS
 
-Create A (or AAAA) DNS records to resolve to your server IP for:
+Create A (or AAAA if your public IP is IPv6) DNS records to resolve to your server IP for:
 
 1. `fmsg.<your-domain>`
 2. `fmsgapi.<your-domain>`
 
-_NOTE_ Ensure DNS is kept up-to-date with your server's IP so you can receive messages!
+_NOTE_ Ensure DNS is kept up-to-date with your server's IP so you can send and receive messages!
 
 ### 2. Configure FMSG
 
@@ -57,14 +61,14 @@ docker compose up -d
 
 If `fmsgd` is running and port `4930` is reachable on `fmsg.<your domain>`, the host is up.
 
-On first start, certbot will request Let's Encrypt TLS certificates for `fmsg.<your-domain>` and `fmsgapi.<your-domain>`. If certificate issuance fails (e.g. the domains do not resolve to the server), the stack will not start. Certificates are persisted in a Docker volume and reused on subsequent starts.
+On first start, certbot will request Let's Encrypt TLS certificates for `fmsg.<your-domain>` and `fmsgapi.<your-domain>`. If certificate issuance fails (e.g. the domains do not resolve to the server or port 80 is blocked), the stack will not start. Certificates are persisted in a Docker volume and reused on subsequent starts.
 
 
 ## Next Steps
 
 ### Add Users
 
-Create users (mailboxes) by placing a CSV file in the `fmsgid_data` volume at `/opt/fmsgid/data/addresses.csv`. The format is:
+Create users (message stores, analoguous to mailboxes) by placing a CSV file in the `fmsgid_data` volume at `/opt/fmsgid/data/addresses.csv`. The format is:
 
 ```csv
 address,display_name,accepting_new,limit_recv_size_total,limit_recv_size_per_msg,limit_recv_size_per_1d,limit_recv_count_per_1d,limit_send_size_total,limit_send_size_per_msg,limit_send_size_per_1d,limit_send_count_per_1d
