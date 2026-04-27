@@ -1,10 +1,23 @@
 # Quickstart - Setting up an fmsg host with fmsg-docker
 
-This quickstart gets the docker compose stack from this repository up and running on your server. TLS provisioning is included and an HTTPS API is exposed so you can start sending and receiving fmsg messages for your domain. TCP port 4930 is also exposed for fmsg host-to-host communication.
+This quick-start gets the docker compose stack from this repository up and running on your server. TLS provisioning is included and an HTTPS API is exposed so you can start sending and receiving fmsg messages for your domain. TCP port 4930 is also exposed for fmsg host-to-host communication.
 
 To learn more about fmsg, see the documentation repository: [fmsg](https://github.com/markmnl/fmsg).
 
 Read the [README.md](https://github.com/markmnl/fmsg-docker) of this repo for more about settings and environment being used in this quickstart.
+
+## Contents
+
+- [Requirements](#requirements)
+- [Steps](#steps)
+  - [0. Server Setup](#0-server-setup)
+  - [1. Configure DNS](#1-configure-dns)
+  - [2. Configure FMSG](#2-configure-fmsg)
+- [Next Steps](#next-steps)
+  - [Add Users](#add-users)
+  - [Connect a Client](#connect-a-client)
+- [Troubleshooting](#troubleshooting)
+    - [container cannot reach `postgres` (Debian 13 / nftables hosts)](#container-cannot-reach-postgres-debian-13--nftables-hosts)
 
 ## Requirements
 
@@ -23,6 +36,8 @@ Clone this repository to the server and make sure docker is running.
 ```
 git clone https://github.com/markmnl/fmsg-docker.git
 ```
+
+
 
 ### 1. Configure DNS
 
@@ -95,3 +110,45 @@ docker compose cp addresses.csv fmsgid:/opt/fmsgid/data/addresses.csv
 * Connect a client such as [fmsg-cli](https://github.com/markmnl/fmsg-cli) to `fmsgapi.<your-domain>` configured with your `FMSG_API_JWT_SECRET` to send and retrieve messages.
 
 _NOTE_ Anyone with `FMSG_API_JWT_SECRET` can mint tokens for your `fmsgapi.<your-domain>` for any user e.g. `@alice@<your-domain>`.
+
+
+## Troubleshooting
+
+### Container cannot reach `postgres` (Debian 13 / nftables hosts)
+
+If a service fails to start with an error like:
+
+```
+ERROR: connecting to database: dial tcp: lookup postgres on 8.8.8.8:53: dial udp 8.8.8.8:53: connect: network is unreachable
+```
+
+the container cannot resolve `postgres` via Docker's embedded DNS and has no outbound network at all. This is almost always a host-side Docker bridge networking problem, most often seen on fresh Debian 13 installs where `nftables` is the default firewall backend. Try the following in order, least invasive first:
+
+1. Restart the Docker daemon and recreate the stack:
+   ```sh
+   sudo systemctl restart docker
+   cd compose && docker compose down && docker compose up -d
+   ```
+2. If the host has `nftables.service` enabled with its own ruleset, it can drop forwarded traffic for Docker's bridges. Either stop it or add accept rules for the docker interfaces:
+   ```sh
+   sudo systemctl disable --now nftables
+   sudo systemctl restart docker
+   ```
+3. Ensure IPv4 forwarding is enabled (Docker normally sets this, but a sysctl drop-in can override it):
+   ```sh
+   sudo sysctl net.ipv4.ip_forward=1
+   sudo systemctl restart docker
+   ```
+4. Use Docker's official `docker-ce` packages rather than Debian's `docker.io`, which has historically lagged on nftables support.
+5. As a last resort, force the iptables-nft shim host-wide:
+   ```sh
+   sudo update-alternatives --set iptables /usr/sbin/iptables-nft
+   sudo update-alternatives --set ip6tables /usr/sbin/ip6tables-nft
+   sudo systemctl restart docker
+   ```
+
+After any of these, verify with:
+
+```sh
+docker compose exec fmsgd getent hosts postgres
+```
