@@ -14,6 +14,21 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+TEST_LOG_DIR="$REPO_ROOT/test/.logs"
+
+begin_log_group() {
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then
+    echo "::group::$1"
+  else
+    echo "$1"
+  fi
+}
+
+end_log_group() {
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then
+    echo "::endgroup::"
+  fi
+}
 
 # ── Cleanup function ─────────────────────────────────────────
 cleanup() {
@@ -28,11 +43,14 @@ cleanup() {
 
   docker network rm fmsg-test 2>/dev/null || true
   rm -rf "$REPO_ROOT/test/.tls"
+  rm -rf "$TEST_LOG_DIR"
   echo "==> Cleanup complete."
 }
 
 SKIP_START=false
 FORCE_REBUILD_CLI=false
+FAILED_TESTS=()
+FAILED_TEST_LOGS=()
 
 for arg in "$@"; do
   case "$arg" in
@@ -61,6 +79,19 @@ done
 on_error() {
   echo ""
   echo "==> TEST FAILED — dumping logs..."
+
+  if [ "${#FAILED_TEST_LOGS[@]}" -gt 0 ]; then
+    echo ""
+    echo "==> Failed test output"
+    for failed_log in "${FAILED_TEST_LOGS[@]}"; do
+      test_name="${failed_log%%:*}"
+      log_path="${failed_log#*:}"
+      begin_log_group "failed test: $test_name"
+      cat "$log_path"
+      end_log_group
+    done
+  fi
+
   cd "$REPO_ROOT/compose"
   echo "--- hairpin.local logs ---"
   COMPOSE_PROJECT_NAME=hairpin FMSG_DOMAIN=hairpin.local FMSG_WEBAPI_HOST_PORT=8181 \
@@ -199,20 +230,24 @@ export EXAMPLE_API_URL=http://localhost:8182
 TESTS_DIR="$SCRIPT_DIR/tests"
 PASSED=0
 FAILED=0
-FAILED_TESTS=()
+
+rm -rf "$TEST_LOG_DIR"
+mkdir -p "$TEST_LOG_DIR"
 
 for test_script in "$TESTS_DIR"/*.sh; do
   [ -f "$test_script" ] || continue
   test_name="$(basename "$test_script")"
+  test_log="$TEST_LOG_DIR/${test_name%.sh}.log"
   echo ""
   echo "==> Running test: $test_name"
-  if bash "$test_script"; then
+  if bash "$test_script" 2>&1 | tee "$test_log"; then
     echo "    PASSED: $test_name"
     PASSED=$((PASSED + 1))
   else
     echo "    FAILED: $test_name"
     FAILED=$((FAILED + 1))
     FAILED_TESTS+=("$test_name")
+    FAILED_TEST_LOGS+=("$test_name:$test_log")
   fi
 done
 
