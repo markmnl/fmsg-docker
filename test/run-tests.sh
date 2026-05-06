@@ -15,6 +15,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 TEST_LOG_DIR="$REPO_ROOT/test/.logs"
+HAIRPIN_COMPOSE_LOG="$TEST_LOG_DIR/hairpin-compose.log"
+EXAMPLE_COMPOSE_LOG="$TEST_LOG_DIR/example-compose.log"
 
 begin_log_group() {
   if [ -n "${GITHUB_ACTIONS:-}" ]; then
@@ -80,6 +82,8 @@ on_error() {
   echo ""
   echo "==> TEST FAILED — dumping logs..."
 
+  mkdir -p "$TEST_LOG_DIR"
+
   if [ "${#FAILED_TEST_LOGS[@]}" -gt 0 ]; then
     echo ""
     echo "==> Failed test output"
@@ -95,10 +99,10 @@ on_error() {
   cd "$REPO_ROOT/compose"
   echo "--- hairpin.local logs ---"
   COMPOSE_PROJECT_NAME=hairpin FMSG_DOMAIN=hairpin.local FMSG_WEBAPI_HOST_PORT=8181 \
-    docker compose -f docker-compose.yml -f ../test/docker-compose.test.yml logs 2>/dev/null || true
+    docker compose -f docker-compose.yml -f ../test/docker-compose.test.yml logs 2>/dev/null | tee "$HAIRPIN_COMPOSE_LOG" || true
   echo "--- example.com logs ---"
   COMPOSE_PROJECT_NAME=example FMSG_DOMAIN=example.com FMSG_WEBAPI_HOST_PORT=8182 \
-    docker compose -f docker-compose.yml -f ../test/docker-compose.test.yml logs 2>/dev/null || true
+    docker compose -f docker-compose.yml -f ../test/docker-compose.test.yml logs 2>/dev/null | tee "$EXAMPLE_COMPOSE_LOG" || true
 }
 trap on_error ERR
 
@@ -141,11 +145,13 @@ fi
 
 if [ "$NEED_BUILD_CLI" = "true" ]; then
   echo "==> Building fmsg CLI (ref: $FMSG_CLI_REF)..."
+  begin_log_group "build fmsg CLI"
   FMSG_CLI_DIR=$(mktemp -d)
   git clone --branch "$FMSG_CLI_REF" --depth 1 https://github.com/markmnl/fmsg-cli.git "$FMSG_CLI_DIR"
   (cd "$FMSG_CLI_DIR" && go build -o "$FMSG_BIN" .)
   rm -rf "$FMSG_CLI_DIR"
   echo "$FMSG_CLI_REF" > "$FMSG_BIN_REF_FILE"
+  end_log_group
 else
   echo "==> Using cached fmsg CLI (ref: $FMSG_CLI_REF)"
 fi
@@ -180,19 +186,23 @@ if [ "$SKIP_START" != "true" ]; then
   # ── Start hairpin.local ────────────────────────────────────
   echo "==> Starting hairpin.local stack..."
   cd "$REPO_ROOT/compose"
+  begin_log_group "start hairpin.local stack"
   COMPOSE_PROJECT_NAME=hairpin \
   FMSG_DOMAIN=hairpin.local \
   FMSG_PORT=4931 \
   FMSG_WEBAPI_HOST_PORT=8181 \
     docker compose -f docker-compose.yml -f ../test/docker-compose.test.yml up -d --build --force-recreate --no-deps --wait
+  end_log_group
 
   # ── Start example.com ──────────────────────────────────────
   echo "==> Starting example.com stack..."
+  begin_log_group "start example.com stack"
   COMPOSE_PROJECT_NAME=example \
   FMSG_DOMAIN=example.com \
   FMSG_PORT=4932 \
   FMSG_WEBAPI_HOST_PORT=8182 \
     docker compose -f docker-compose.yml -f ../test/docker-compose.test.yml up -d --build --force-recreate --wait
+  end_log_group
 
   # ── Debug: show running containers & port mappings ────────
   echo "==> Running containers:"

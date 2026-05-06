@@ -42,6 +42,14 @@ jobs:
           FMSG_WEBAPI_REF: ${{ github.event.inputs.fmsg_webapi_ref }}
           FMSG_CLI_REF: ${{ github.event.inputs.fmsg_cli_ref }}
 
+      - name: Upload integration logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-logs
+          path: test/.logs/
+          if-no-files-found: ignore
+
       - name: Cleanup
         if: always()
         run: bash test/run-tests.sh cleanup
