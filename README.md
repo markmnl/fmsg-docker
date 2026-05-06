@@ -4,6 +4,8 @@
 
 Dockerised stack composing a full fmsg setup including: [fmsgd](https://github.com/markmnl/fmsgd), [fmsgid](https://github.com/markmnl/fmsgid) and [fmsg-webapi](https://github.com/markmnl/fmsg-webapi)
 
+Navigate to [QUICKSTART.md](QUICKSTART.md)
+
 <div align="center">
    <picture>
       <source media="(prefers-color-scheme: dark)" srcset="docs/fmsg-docker-dark.png">
