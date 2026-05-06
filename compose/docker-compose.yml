@@ -118,7 +118,7 @@ services:
       - fmsg_data:/opt/fmsg/data
       - letsencrypt:/etc/letsencrypt:ro
     ports:
-      - "443:443"
+      - "443:8000"
     depends_on:
       certbot:
         condition: service_completed_successfully
