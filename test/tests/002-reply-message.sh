@@ -29,3 +29,7 @@ echo "$MSG_OUTPUT"
 if ! echo "$MSG_OUTPUT" | grep -q '^From: @bob@example.com$'; then
   fail_test "received message $MSG_ID was not from @bob@example.com"
 fi
+
+if ! echo "$MSG_OUTPUT" | grep -q '^PID:[[:space:]]*1$'; then
+  fail_test "received message $MSG_ID did not have pid 1"
+fi

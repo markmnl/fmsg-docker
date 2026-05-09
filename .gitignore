@@ -35,3 +35,4 @@ go.work.sum
 .env
 .bin/
 test/.tls/
+test/.logs/

@@ -163,6 +163,16 @@ if [ "$SKIP_START" != "true" ]; then
   # ── Clean up any previous run ──────────────────────────────
   cleanup
 
+  # ── Pre-pull public images used by compose/builds ──────────
+  # Docker Desktop credential helpers can fail during BuildKit metadata loads;
+  # serial docker pulls avoid that path and warm the local image cache.
+  echo "==> Ensuring public base images are available..."
+  for image in debian:bookworm-slim golang:1.25 postgres:18-alpine certbot/certbot:latest; do
+    if ! docker image inspect "$image" >/dev/null 2>&1; then
+      docker pull "$image"
+    fi
+  done
+
   # ── Create shared Docker network ──────────────────────────
   echo "==> Creating fmsg-test network..."
   docker network create fmsg-test
