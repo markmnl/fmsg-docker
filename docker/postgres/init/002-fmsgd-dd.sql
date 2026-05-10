@@ -32,8 +32,8 @@ create table if not exists msg_to (
 	msg_id			bigint				not null references msg (id),
 	addr			varchar(255)		not null,
     time_delivered  double precision,   -- if sending, time sending host recieved delivery confirmation, if receiving, time successfully received message
-    time_read       double precision,   -- time recipient read the message; null if unread
     time_last_attempt double precision, -- only used when sending, time of last delivery attempt if failed; otherwise null
+    time_read       double precision,   -- time recipient read the message; null if unread
     response_code   smallint,		    -- only used when sending, response code of last delivery attempt if failed; otherwise null
     attempt_count   int             not null default 0, -- number of failed delivery attempts; used for exponential back-off
 	unique (msg_id, addr)
@@ -45,8 +45,8 @@ create table if not exists msg_add_to (
 	msg_id			bigint				not null references msg (id),
 	addr			varchar(255)		not null,
     time_delivered  double precision,   -- if sending, time sending host recieved delivery confirmation, if receiving, time successfully received message
-    time_read       double precision,   -- time recipient read the message; null if unread
     time_last_attempt double precision, -- only used when sending, time of last delivery attempt if failed; otherwise null
+    time_read       double precision,   -- time recipient read the message; null if unread
     response_code   smallint,		    -- only used when sending, response code of last delivery attempt if failed; otherwise null
     attempt_count   int             not null default 0, -- number of failed delivery attempts; used for exponential back-off
 	unique (msg_id, addr)
@@ -87,4 +87,3 @@ drop trigger if exists trg_msg_add_to_insert on msg_add_to;
 create trigger trg_msg_add_to_insert
     after insert on msg_add_to
     for each row execute function notify_msg_to_insert();
-

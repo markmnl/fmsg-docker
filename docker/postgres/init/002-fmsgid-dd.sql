@@ -13,14 +13,14 @@ create table if not exists address (
     address 					text 	not null,
     display_name 				text,
     accepting_new 				bool	not null default true,
-    limit_recv_size_total 		bigint	not null default -1,
-    limit_recv_size_per_msg 	bigint	not null default -1,
-    limit_recv_size_per_1d 		bigint	not null default -1,
-    limit_recv_count_per_1d 	bigint	not null default -1,
-    limit_send_size_total 		bigint	not null default -1,
-    limit_send_size_per_msg 	bigint	not null default -1,
-    limit_send_size_per_1d 		bigint	not null default -1,
-    limit_send_count_per_1d 	bigint	not null default -1
+    limit_recv_size_total 		bigint	not null default 102400000,
+    limit_recv_size_per_msg 	bigint	not null default 10240,
+    limit_recv_size_per_1d 		bigint	not null default 102400,
+    limit_recv_count_per_1d 	bigint	not null default 1000,
+    limit_send_size_total 		bigint	not null default 102400000,
+    limit_send_size_per_msg 	bigint	not null default 10240,
+    limit_send_size_per_1d 		bigint	not null default 102400,
+    limit_send_count_per_1d 	bigint	not null default 1000
 );
 
 create table if not exists address_tx (

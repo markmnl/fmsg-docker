@@ -126,6 +126,12 @@ End-to-end tests that spin up two full stacks (`hairpin.local` and `example.com`
 
 # Tear down stacks & network
 ./test/run-tests.sh cleanup
+
+# Refresh local database DD scripts from component branches
+FMSGD_REF=main FMSGID_REF=main ./scripts/update-dd.sh
+
+# CI drift check for database DD scripts
+./scripts/update-dd.sh --check
 ```
 
 Tests also run on demand via the **Integration Test** GitHub Actions workflow.
