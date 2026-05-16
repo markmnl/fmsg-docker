@@ -6,8 +6,7 @@ ARG CACHEBUST
 WORKDIR /build
 
 RUN git clone --branch "$FMSGD_REF" --depth 1 https://github.com/markmnl/fmsgd.git . && \
-    cd src && \
-    go build -o fmsgd .
+    go build -o fmsgd ./cmd/fmsgd
 
 FROM debian:bookworm-slim
 
@@ -18,7 +17,7 @@ RUN useradd -r -s /bin/false fmsg
 
 WORKDIR /opt/fmsgd
 
-COPY --from=builder /build/src/fmsgd /opt/fmsgd/fmsgd
+COPY --from=builder /build/fmsgd /opt/fmsgd/fmsgd
 
 RUN mkdir -p /opt/fmsg/data && \
     chown -R fmsg:fmsg /opt/fmsgd /opt/fmsg/data
