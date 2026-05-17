@@ -9,10 +9,6 @@ extract_send_id() {
   echo "$1" | sed -n 's/^ID: \([0-9][0-9]*\)$/\1/p' | head -1
 }
 
-extract_wait_latest_id() {
-  echo "$1" | sed -n 's/^New message available\. Latest ID: \([0-9][0-9]*\)$/\1/p' | head -1
-}
-
 get_max_message_id() {
   local list_output
   local ids
@@ -31,18 +27,19 @@ get_max_message_id() {
 wait_for_new_message_id() {
   local since_id="$1"
   local timeout="${2:-15}"
-  local wait_output
+  local attempt
   local latest_id
 
-  wait_output=$(fmsg wait --since-id "$since_id" --timeout "$timeout")
-  echo "    $wait_output" >&2
+  for attempt in $(seq 1 "$timeout"); do
+    latest_id=$(get_max_message_id)
+    if [ -n "$latest_id" ] && [ "$latest_id" -gt "$since_id" ]; then
+      echo "$latest_id"
+      return
+    fi
+    sleep 1
+  done
 
-  latest_id=$(extract_wait_latest_id "$wait_output")
-  if [ -z "$latest_id" ]; then
-    fail_test "timed out waiting for a new message after ID $since_id"
-  fi
-
-  echo "$latest_id"
+  fail_test "timed out waiting for a new message after ID $since_id"
 }
 
 wait_for_message_id_by_data() {
