@@ -90,7 +90,8 @@ begin
     end if;
 
     if parent_sha256 is null or octet_length(parent_sha256) = 0 then
-        raise exception 'cannot set pid %: parent message has no sha256', NEW.pid;
+        -- parent was delivered locally only and has no sha256 yet; psha256 cannot be populated
+        return NEW;
     end if;
 
     if NEW.psha256 is null or octet_length(NEW.psha256) = 0 then
@@ -116,7 +117,7 @@ begin
             raise exception 'cannot make message % a draft: it has replies', NEW.id;
         end if;
 
-        if NEW.sha256 is null or octet_length(NEW.sha256) = 0 then
+        if OLD.sha256 is not null and (NEW.sha256 is null or octet_length(NEW.sha256) = 0) then
             raise exception 'cannot clear sha256 for message %: it has replies', NEW.id;
         end if;
 
@@ -133,11 +134,26 @@ create trigger trg_msg_prevent_unreferenceable_parent
     before update of time_sent, sha256 on msg
     for each row execute function prevent_referenced_msg_from_becoming_unreferenceable();
 
--- notify when a new msg_to row is inserted with null time_delivered so the
--- sender can pick it up immediately instead of waiting for the next poll.
-create or replace function notify_msg_to_insert() returns trigger as $$
+-- Notify the sender's outgoing worker (channel new_msg_to) whenever new
+-- delivery work appears. One function serves all three triggers, dispatching
+-- on the table it fired for:
+--   * msg               -- a draft message transitions to sent (time_sent set
+--                          for the first time); notify every recipient.
+--   * msg_to/msg_add_to -- a recipient row is inserted against an already-sent
+--                          message (recipients added via add-to after the
+--                          message was sent); notify that recipient.
+-- The payload is advisory only: the worker re-polls fully on any wake-up.
+create or replace function notify_msg_sent() returns trigger as $$
 begin
-    if NEW.time_delivered is null then
+    if TG_TABLE_NAME = 'msg' then
+        if OLD.time_sent is null and NEW.time_sent is not null then
+            perform pg_notify('new_msg_to', NEW.id::text || ',' || addr)
+            from msg_to where msg_id = NEW.id;
+
+            perform pg_notify('new_msg_to', NEW.id::text || ',' || addr)
+            from msg_add_to where msg_id = NEW.id;
+        end if;
+    elsif NEW.time_delivered is null then
         perform pg_notify('new_msg_to', NEW.msg_id::text || ',' || NEW.addr)
         from msg where id = NEW.msg_id and time_sent is not null;
     end if;
@@ -148,11 +164,15 @@ $$ language plpgsql;
 drop trigger if exists trg_msg_to_insert on msg_to;
 create trigger trg_msg_to_insert
     after insert on msg_to
-    for each row execute function notify_msg_to_insert();
+    for each row execute function notify_msg_sent();
 
--- notify when a new msg_add_to row is inserted with null time_delivered so the
--- sender can pick it up immediately instead of waiting for the next poll.
 drop trigger if exists trg_msg_add_to_insert on msg_add_to;
 create trigger trg_msg_add_to_insert
     after insert on msg_add_to
-    for each row execute function notify_msg_to_insert();
+    for each row execute function notify_msg_sent();
+
+drop trigger if exists trg_msg_sent on msg;
+create trigger trg_msg_sent
+    after update on msg
+    for each row execute function notify_msg_sent();
+
