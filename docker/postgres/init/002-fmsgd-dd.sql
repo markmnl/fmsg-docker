@@ -17,8 +17,7 @@ create table if not exists msg (
 	is_deflate		boolean				not null default false,
     time_sent     	double precision,             -- time sending host recieved message for sending, message timestamp field, NULL means message not ready for sending i.e. draft
     from_addr     	varchar(255)    	not null,
-    add_to_from   	varchar(255),
-    topic         	varchar(255)    	not null, 
+    topic         	varchar(255)    	not null,
     type          	varchar(255)    	not null,
     sha256        	bytea           	unique,
     psha256       	bytea,
@@ -40,9 +39,22 @@ create table if not exists msg_to (
 );
 create index on msg_to ((lower(addr)));
 
+-- Each add-to delivery for a shared message is one batch: a single sender
+-- (add_to_from) added a set of recipients at a point in time. Storing batches
+-- separately lets readers reconstruct who added which recipients and when,
+-- which a single flat recipient list cannot preserve (SPEC §12).
+create table if not exists msg_add_to_batch (
+	id				bigserial			primary key,
+	msg_id			bigint				not null references msg (id),
+	add_to_from		varchar(255)		not null,           -- sender that added this batch's recipients
+	time_added		double precision	not null            -- when this host recorded the batch
+);
+create index on msg_add_to_batch (msg_id);
+
 create table if not exists msg_add_to (
 	id				bigserial			primary key,
 	msg_id			bigint				not null references msg (id),
+	batch_id		bigint				not null references msg_add_to_batch (id), -- batch this recipient was added in
 	addr			varchar(255)		not null,
     time_delivered  double precision,   -- if sending, time sending host recieved delivery confirmation, if receiving, time successfully received message
     time_last_attempt double precision, -- only used when sending, time of last delivery attempt if failed; otherwise null
@@ -52,6 +64,7 @@ create table if not exists msg_add_to (
 	unique (msg_id, addr)
 );
 create index on msg_add_to ((lower(addr)));
+create index on msg_add_to (batch_id);
 
 create table if not exists msg_attachment (
     msg_id        	bigint          references msg (id),
@@ -134,26 +147,78 @@ create trigger trg_msg_prevent_unreferenceable_parent
     before update of time_sent, sha256 on msg
     for each row execute function prevent_referenced_msg_from_becoming_unreferenceable();
 
--- Notify when message sent/recieved, when time_sent is set
+-- Notify the sender's outgoing worker (channel new_msg_to) whenever new
+-- delivery work appears. One function serves all three triggers, dispatching
+-- on the table it fired for:
+--   * msg               -- a draft message transitions to sent (time_sent set
+--                          for the first time); notify every recipient.
+--   * msg_to/msg_add_to -- a recipient row is inserted against an already-sent
+--                          message (recipients added via add-to after the
+--                          message was sent, including a freshly inserted
+--                          message whose recipient rows follow in the same
+--                          transaction); notify that recipient.
+-- The payload is advisory only: the worker re-polls fully on any wake-up.
 create or replace function notify_msg_sent() returns trigger as $$
 begin
-    if (TG_OP = 'INSERT' and NEW.time_sent is not null) or
-       (TG_OP = 'UPDATE' and OLD.time_sent is null and NEW.time_sent is not null) then
-        perform pg_notify('new_msg_to', NEW.id::text || ',' || addr)
-        from msg_to where msg_id = NEW.id;
+    if TG_TABLE_NAME = 'msg' then
+        if OLD.time_sent is null and NEW.time_sent is not null then
+            perform pg_notify('new_msg_to', NEW.id::text || ',' || addr)
+            from msg_to where msg_id = NEW.id;
 
-        perform pg_notify('new_msg_to', NEW.id::text || ',' || addr)
-        from msg_add_to where msg_id = NEW.id;
+            perform pg_notify('new_msg_to', NEW.id::text || ',' || addr)
+            from msg_add_to where msg_id = NEW.id;
+        end if;
+    elsif NEW.time_delivered is null then
+        perform pg_notify('new_msg_to', NEW.msg_id::text || ',' || NEW.addr)
+        from msg where id = NEW.msg_id and time_sent is not null;
     end if;
     return NEW;
 end;
 $$ language plpgsql;
 
 drop trigger if exists trg_msg_to_insert on msg_to;
+create trigger trg_msg_to_insert
+    after insert on msg_to
+    for each row execute function notify_msg_sent();
+
 drop trigger if exists trg_msg_add_to_insert on msg_add_to;
+create trigger trg_msg_add_to_insert
+    after insert on msg_add_to
+    for each row execute function notify_msg_sent();
 
 drop trigger if exists trg_msg_sent on msg;
 create trigger trg_msg_sent
-    after insert or update on msg
+    after update on msg
     for each row execute function notify_msg_sent();
 
+-- Notify listeners (channel new_msg) that a message has become sent/arrived:
+-- time_sent set for the first time, on insert (e.g. a message received from a
+-- remote host) or update (a local draft being sent). Unlike new_msg_to this
+-- fires regardless of recipient domain, so push-notification listeners can wake
+-- without polling. Payload is "<msg id>,<addr>", one notification per recipient
+-- -- the listener checks addr against its currently-subscribed clients and only
+-- fetches message detail for those that are connected.
+--
+-- This is a DEFERRABLE constraint trigger so it runs at COMMIT: on insert the
+-- msg row is written before its msg_to/msg_add_to rows (FK ordering), so a
+-- plain row trigger would see no recipients. At commit every recipient row in
+-- the transaction is visible.
+create or replace function notify_new_msg() returns trigger as $$
+begin
+    if (TG_OP = 'INSERT' and NEW.time_sent is not null) or
+       (TG_OP = 'UPDATE' and OLD.time_sent is null and NEW.time_sent is not null) then
+        perform pg_notify('new_msg', NEW.id::text || ',' || addr)
+        from msg_to where msg_id = NEW.id;
+
+        perform pg_notify('new_msg', NEW.id::text || ',' || addr)
+        from msg_add_to where msg_id = NEW.id;
+    end if;
+    return NEW;
+end;
+$$ language plpgsql;
+
+drop trigger if exists trg_new_msg on msg;
+create constraint trigger trg_new_msg
+    after insert or update on msg
+    deferrable initially deferred
+    for each row execute function notify_new_msg();
