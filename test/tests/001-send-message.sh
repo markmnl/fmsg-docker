@@ -15,20 +15,16 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "    Sending message: @alice@hairpin.local → @bob@example.com"
-export FMSG_API_URL="$HAIRPIN_API_URL"
-fmsg login '@alice@hairpin.local'
-SEND_OUTPUT=$(fmsg send '@bob@example.com' "$MESSAGE_TEXT")
+echo "    Sending message: $ALICE_ADDR -> $BOB_ADDR"
+SEND_OUTPUT=$(fmsg_as "$HAIRPIN_API_URL" "$ALICE_API_KEY" send "$BOB_ADDR" "$MESSAGE_TEXT")
 echo "$SEND_OUTPUT"
 
 echo "    Waiting for cross-instance delivery..."
-export FMSG_API_URL="$EXAMPLE_API_URL"
-fmsg login '@bob@example.com'
-MSG_ID=$(wait_for_message_id_by_data "$MESSAGE_TEXT")
+MSG_ID=$(wait_for_message_id_by_data "$EXAMPLE_API_URL" "$BOB_API_KEY" "$MESSAGE_TEXT")
 echo "    Using received message ID: $MSG_ID"
 
-echo "    Downloading message data as @bob@example.com"
-fmsg get-data "$MSG_ID" "$TMP_DIR/message.txt"
+echo "    Downloading message data as $BOB_ADDR"
+fmsg_as "$EXAMPLE_API_URL" "$BOB_API_KEY" get-data "$MSG_ID" "$TMP_DIR/message.txt"
 
 echo "    Verifying downloaded message data"
 if ! grep -Fxq "$MESSAGE_TEXT" "$TMP_DIR/message.txt"; then

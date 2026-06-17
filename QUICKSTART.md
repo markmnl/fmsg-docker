@@ -46,7 +46,7 @@ Edit `compose/.env` and set at least:
 ```env
 FMSG_DOMAIN=example.com
 CERTBOT_EMAIL=
-FMSG_API_JWT_SECRET=<secret>
+FMSG_API_TOKEN_ED25519_PRIVATE_KEY=<base64-ed25519-seed>
 FMSGD_WRITER_PGPASSWORD=<strong-password>
 FMSGID_WRITER_PGPASSWORD=<strong-password>
 ```
@@ -54,6 +54,7 @@ FMSGID_WRITER_PGPASSWORD=<strong-password>
 _NOTE_
 * FMSG_DOMAIN is the domain part of fmsg addresses e.g. in `@user@example.com` would be `example.com`. This server you are setting up is located at the subdomain `fmsg.<your-domain>` but addresses will be at `<your-domain>`, you should only specify `<your-domain>` for FMSG_DOMAIN here.
 * CERTBOT_EMAIL is an email address supplied to [Let's Encrypt](https://letsencrypt.org/) for e.g. TLS expiry warnings.
+* Generate `FMSG_API_TOKEN_ED25519_PRIVATE_KEY` with `openssl rand -base64 32`.
 * For all secrets and passwords env vars create your own.
 
 Start the stack for the first time from `compose/` and pass the one-time init passwords on the command line (keep these secret, keep them safe):
@@ -92,6 +93,19 @@ docker compose cp addresses.csv fmsgid:/opt/fmsgid/data/addresses.csv
 
 ### Connect a Client
 
-* Connect a client such as [fmsg-cli](https://github.com/markmnl/fmsg-cli) to `fmsgapi.<your-domain>` configured with your `FMSG_API_JWT_SECRET` to send and retrieve messages.
+Create or rotate an API key with the fmsg-webapi operator command, then use it with [fmsg-cli](https://github.com/markmnl/fmsg-cli):
 
-_NOTE_ Anyone with `FMSG_API_JWT_SECRET` can mint tokens for your `fmsgapi.<your-domain>` for any user e.g. `@alice@<your-domain>`.
+```sh
+docker compose exec fmsg-webapi /opt/fmsg-webapi/fmsg-webapi api-key create-delegation \
+  -owner @alice@example.com \
+  -agent cli \
+  -addr @alice@example.com \
+  -cidr 203.0.113.0/24 \
+  -expires 2026-12-31T00:00:00Z
+
+FMSG_API_URL=https://fmsgapi.example.com \
+FMSG_API_KEY=fmsgk_<key_id>_<secret> \
+fmsg list
+```
+
+The API key plaintext is printed once when created or rotated. Store it securely and pass it to automated clients through `FMSG_API_KEY`.

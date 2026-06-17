@@ -82,7 +82,7 @@ The compose stack uses Docker named volumes:
    ```
    FMSG_DOMAIN=example.com
    CERTBOT_EMAIL=admin@example.com
-   FMSG_API_JWT_SECRET=<secret>
+   FMSG_API_TOKEN_ED25519_PRIVATE_KEY=<base64-ed25519-seed>
    FMSGD_WRITER_PGPASSWORD=<strong random password>
    FMSGID_WRITER_PGPASSWORD=<strong random password>
    ```
@@ -113,7 +113,7 @@ The compose stack uses Docker named volumes:
 
 ## Integration Tests
 
-End-to-end tests that spin up two full stacks (`hairpin.local` and `example.com`) on a shared Docker network and exchange messages between them using [fmsg-cli](https://github.com/markmnl/fmsg-cli).
+End-to-end tests that spin up two full stacks (`hairpin.local` and `example.com`) on a shared Docker network and exchange messages between them using [fmsg-cli](https://github.com/markmnl/fmsg-cli). The test runner enables fmsg-webapi API-key auth, creates delegated API keys for the test actors during setup, and passes them to fmsg-cli with `FMSG_API_KEY`.
 
 **Prerequisites:** Docker, docker compose, Go 1.24+, curl.
 
@@ -128,7 +128,7 @@ End-to-end tests that spin up two full stacks (`hairpin.local` and `example.com`
 ./test/run-tests.sh cleanup
 
 # Refresh local database DD scripts from component branches
-FMSGD_REF=main FMSGID_REF=main ./scripts/update-dd.sh
+FMSGD_REF=main FMSGID_REF=main FMSG_WEBAPI_REF=main ./scripts/update-dd.sh
 
 # CI drift check for database DD scripts
 ./scripts/update-dd.sh --check
@@ -146,11 +146,17 @@ Configure these in `compose/.env`. Variables marked **required** have no default
 |------------------------------|----------|-----------|----------------------------------------------------------|
 | `FMSG_DOMAIN`                | yes      |           | The domain name for your fmsg host                       |
 | `CERTBOT_EMAIL`              | yes      |           | Email address for Let's Encrypt certificate registration |
-| `FMSG_API_JWT_SECRET`        | yes      |           | HMAC secret for fmsg-webapi JWT validation               |
+| `FMSG_API_TOKEN_ED25519_PRIVATE_KEY` | auth |      | Base64 Ed25519 seed/private key used to mint first-party JWTs from API keys |
+| `FMSG_JWT_JWKS_URL`          | auth     |           | JWKS endpoint for external RS256 user JWT login          |
+| `FMSG_JWT_ISSUER`            | JWKS     |           | Expected issuer for external user JWTs                   |
+| `FMSG_JWT_AUDIENCE`          | JWKS     |           | Expected audience for external user JWTs                 |
+| `FMSG_JWT_ADDRESS_CLAIM`     | JWKS     |           | Claim containing the fmsg address                        |
 | `FMSG_PORT`                  | no       | `4930`    | Host port fmsgd listens on                               |
 | `FMSGID_PORT`                | no       | `8080`    | Internal port for the fmsgid API                         |
 | `GIN_MODE`                   | no       | `release` | Gin framework mode for fmsgid (`release` or `debug`)    |
 | `FMSG_SKIP_DOMAIN_IP_CHECK`  | no       | `false`   | Skip domain-to-IP validation in fmsgd (useful for dev)   |
+
+At least one auth mode is required for fmsg-webapi: API-key auth with `FMSG_API_TOKEN_ED25519_PRIVATE_KEY`, external user JWT auth with the JWKS variables, or both. API keys can be created or rotated with the fmsg-webapi operator command and used by fmsg-cli through `FMSG_API_KEY`.
 
 ### Database
 
@@ -176,6 +182,7 @@ On first startup (empty data volume), PostgreSQL runs the scripts in `docker/pos
 | `001-init.sh`        | Creates roles (with passwords from env) and databases |
 | `002-fmsgd-dd.sql`   | Creates tables and other database objects for fmsgd   |
 | `002-fmsgid-dd.sql`  | Creates tables and other database objects for fmsgid  |
+| `003-fmsg-webapi-dd.sql` | Creates fmsg-webapi API-key grant tables          |
 | `999-permissions.sql`| Grants permissions after all objects exist            |
 
 > **WARNING:** To re-run initialisation you must remove the `postgres_data` volume.

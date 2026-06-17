@@ -10,11 +10,12 @@ usage() {
   cat <<'EOF'
 Usage: scripts/update-dd.sh [--check]
 
-Updates local PostgreSQL DD scripts from the fmsgd and fmsgid repositories.
+Updates local PostgreSQL DD scripts from the fmsgd, fmsgid and fmsg-webapi repositories.
 
 Environment variables:
-  FMSGD_REF   fmsgd branch to fetch from  (default: main)
-  FMSGID_REF  fmsgid branch to fetch from (default: main)
+  FMSGD_REF       fmsgd branch to fetch from       (default: main)
+  FMSGID_REF      fmsgid branch to fetch from      (default: main)
+  FMSG_WEBAPI_REF fmsg-webapi branch to fetch from (default: main)
 
 Options:
   --check     report drift without modifying files; exits non-zero on drift
@@ -45,6 +46,7 @@ fi
 
 FMSGD_REF="${FMSGD_REF:-main}"
 FMSGID_REF="${FMSGID_REF:-main}"
+FMSG_WEBAPI_REF="${FMSG_WEBAPI_REF:-main}"
 
 TMP_DIR="$(mktemp -d)"
 cleanup() {
@@ -84,6 +86,7 @@ STATUS=0
 
 write_dd "fmsgd" "$FMSGD_REF" "fmsgd" "$REPO_ROOT/docker/postgres/init/002-fmsgd-dd.sql" || STATUS=1
 write_dd "fmsgid" "$FMSGID_REF" "fmsgid" "$REPO_ROOT/docker/postgres/init/002-fmsgid-dd.sql" || STATUS=1
+write_dd "fmsg-webapi" "$FMSG_WEBAPI_REF" "fmsgd" "$REPO_ROOT/docker/postgres/init/003-fmsg-webapi-dd.sql" || STATUS=1
 
 if [ "$MODE" = "check" ] && [ "$STATUS" -ne 0 ]; then
   echo "DD scripts are out of date. Run scripts/update-dd.sh with matching refs." >&2
