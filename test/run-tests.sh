@@ -114,8 +114,7 @@ export FMSGID_WRITER_PGPASSWORD=testfmsgidwriter
 export FMSGID_READER_PGPASSWORD=testfmsgidreader
 export FMSG_SKIP_DOMAIN_IP_CHECK=true
 export FMSG_SKIP_AUTHORISED_IPS=true
-export FMSG_API_JWT_SECRET=test-jwt-secret
-export FMSG_JWT_SECRET=test-jwt-secret
+export FMSG_API_TOKEN_ED25519_PRIVATE_KEY="${FMSG_API_TOKEN_ED25519_PRIVATE_KEY:-$(openssl rand -base64 32)}"
 export FMSG_TLS_INSECURE_SKIP_VERIFY=true
 
 # ── Pass through ref overrides for Docker build args ─────────
@@ -123,6 +122,62 @@ export FMSGD_REF=${FMSGD_REF:-main}
 export FMSGID_REF=${FMSGID_REF:-main}
 export FMSG_WEBAPI_REF=${FMSG_WEBAPI_REF:-main}
 FMSG_CLI_REF=${FMSG_CLI_REF:-main}
+
+export ALICE_ADDR="@alice@hairpin.local"
+export BOB_ADDR="@bob@example.com"
+export CAROL_ADDR="@carol@example.com"
+
+mask_secret() {
+  if [ -n "${GITHUB_ACTIONS:-}" ] && [ -n "$1" ]; then
+    echo "::add-mask::$1"
+  fi
+}
+
+create_or_rotate_api_key() {
+  local container="$1"
+  local owner="$2"
+  local addr="$3"
+  local output
+  local api_key
+
+  if ! output=$(docker exec "$container" /opt/fmsg-webapi/fmsg-webapi api-key create-delegation \
+      -owner "$owner" \
+      -agent test \
+      -addr "$addr" \
+      -cidr "0.0.0.0/0,::/0" \
+      -expires "2099-01-01T00:00:00Z" 2>&1); then
+    if ! output=$(docker exec "$container" /opt/fmsg-webapi/fmsg-webapi api-key rotate-delegation \
+        -owner "$owner" \
+        -agent test \
+        -cidr "0.0.0.0/0,::/0" \
+        -expires "2099-01-01T00:00:00Z" 2>&1); then
+      echo "Failed to create API key for $addr" >&2
+      echo "$output" | sed 's/^api_key=.*/api_key=<redacted>/' >&2
+      exit 1
+    fi
+  fi
+
+  api_key=$(echo "$output" | sed -n 's/^api_key=//p' | head -1)
+  if [ -z "$api_key" ]; then
+    echo "Failed to create API key for $addr" >&2
+    echo "$output" | sed 's/^api_key=.*/api_key=<redacted>/' >&2
+    exit 1
+  fi
+
+  echo "$api_key"
+}
+
+setup_api_keys() {
+  echo "==> Creating integration-test API keys..."
+  ALICE_API_KEY="$(create_or_rotate_api_key hairpin-fmsg-webapi-1 "$ALICE_ADDR" "$ALICE_ADDR")"
+  BOB_API_KEY="$(create_or_rotate_api_key example-fmsg-webapi-1 "$BOB_ADDR" "$BOB_ADDR")"
+  CAROL_API_KEY="$(create_or_rotate_api_key example-fmsg-webapi-1 "$CAROL_ADDR" "$CAROL_ADDR")"
+  export ALICE_API_KEY BOB_API_KEY CAROL_API_KEY
+  mask_secret "$ALICE_API_KEY"
+  mask_secret "$BOB_API_KEY"
+  mask_secret "$CAROL_API_KEY"
+  echo "    ready"
+}
 
 # ── Ensure Go is on PATH ──────────────────────────────────────
 if ! command -v go &>/dev/null && [ -x /usr/local/go/bin/go ]; then
@@ -245,6 +300,8 @@ fi
 # ── Export env vars for test scripts ──────────────────────────
 export HAIRPIN_API_URL=http://localhost:8181
 export EXAMPLE_API_URL=http://localhost:8182
+
+setup_api_keys
 
 # ── Run test scripts ─────────────────────────────────────────
 TESTS_DIR="$SCRIPT_DIR/tests"

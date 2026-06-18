@@ -9,11 +9,21 @@ extract_send_id() {
   echo "$1" | sed -n 's/^ID: \([0-9][0-9]*\)$/\1/p' | head -1
 }
 
+fmsg_as() {
+  local api_url="$1"
+  local api_key="$2"
+  shift 2
+
+  FMSG_API_URL="$api_url" FMSG_API_KEY="$api_key" fmsg "$@"
+}
+
 get_max_message_id() {
+  local api_url="$1"
+  local api_key="$2"
   local list_output
   local ids
 
-  list_output=$(fmsg list 2>/dev/null || true)
+  list_output=$(fmsg_as "$api_url" "$api_key" list --limit 20 2>/dev/null || true)
   ids=$(echo "$list_output" | sed -n 's/^ID: \([0-9][0-9]*\).*/\1/p')
 
   if [ -z "$ids" ]; then
@@ -25,13 +35,15 @@ get_max_message_id() {
 }
 
 wait_for_new_message_id() {
-  local since_id="$1"
-  local timeout="${2:-15}"
+  local api_url="$1"
+  local api_key="$2"
+  local since_id="$3"
+  local timeout="${4:-15}"
   local attempt
   local latest_id
 
   for attempt in $(seq 1 "$timeout"); do
-    latest_id=$(get_max_message_id)
+    latest_id=$(get_max_message_id "$api_url" "$api_key")
     if [ -n "$latest_id" ] && [ "$latest_id" -gt "$since_id" ]; then
       echo "$latest_id"
       return
@@ -43,8 +55,10 @@ wait_for_new_message_id() {
 }
 
 wait_for_message_id_by_data() {
-  local expected_data="$1"
-  local timeout="${2:-15}"
+  local api_url="$1"
+  local api_key="$2"
+  local expected_data="$3"
+  local timeout="${4:-15}"
   local tmp_file
   local attempt
   local ids
@@ -54,11 +68,11 @@ wait_for_message_id_by_data() {
   tmp_file=$(mktemp)
 
   for attempt in $(seq 1 "$timeout"); do
-    ids=$(fmsg list --limit 1 2>/dev/null | sed -n 's/^ID: \([0-9][0-9]*\).*/\1/p')
+    ids=$(fmsg_as "$api_url" "$api_key" list --limit 20 2>/dev/null | sed -n 's/^ID: \([0-9][0-9]*\).*/\1/p')
     ids_reversed=$(echo "$ids" | awk 'NF{a[++n]=$0} END{for(i=n;i>=1;i--) print a[i]}')
 
     for id in $ids_reversed; do
-      if fmsg get-data "$id" "$tmp_file" >/dev/null 2>&1 && grep -Fxq "$expected_data" "$tmp_file"; then
+      if fmsg_as "$api_url" "$api_key" get-data "$id" "$tmp_file" >/dev/null 2>&1 && grep -Fxq "$expected_data" "$tmp_file"; then
         rm -f "$tmp_file"
         echo "$id"
         return
@@ -70,26 +84,4 @@ wait_for_message_id_by_data() {
 
   rm -f "$tmp_file"
   fail_test "timed out waiting for expected message data"
-}
-
-get_auth_token() {
-  local auth_file
-  local token
-
-  # Prefer explicit XDG path, then Windows APPDATA, then default ~/.config.
-  if [ -n "${XDG_CONFIG_HOME:-}" ] && [ -f "$XDG_CONFIG_HOME/fmsg/auth.json" ]; then
-    auth_file="$XDG_CONFIG_HOME/fmsg/auth.json"
-  elif [ -n "${APPDATA:-}" ] && [ -f "$APPDATA/fmsg/auth.json" ]; then
-    auth_file="$APPDATA/fmsg/auth.json"
-  else
-    auth_file="$HOME/.config/fmsg/auth.json"
-  fi
-
-  token=$(sed -n 's/^[[:space:]]*"token":[[:space:]]*"\([^"]*\)".*/\1/p' "$auth_file" | head -1)
-
-  if [ -z "$token" ]; then
-    fail_test "could not determine auth token from $auth_file"
-  fi
-
-  echo "$token"
 }
