@@ -1,7 +1,7 @@
 services:
 
   certbot:
-    image: certbot/certbot
+    image: docker.io/certbot/certbot
     restart: "no"
     entrypoint: ["/bin/sh", "/entrypoint.sh"]
     environment:
@@ -14,7 +14,7 @@ services:
       - "80:80"
 
   postgres:
-    image: postgres:18-alpine
+    image: docker.io/library/postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${PGUSER:-postgres}
