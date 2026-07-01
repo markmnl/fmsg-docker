@@ -9,7 +9,7 @@ services:
       CERTBOT_EMAIL: ${CERTBOT_EMAIL}
     volumes:
       - letsencrypt:/etc/letsencrypt
-      - ../docker/certbot/entrypoint.sh:/entrypoint.sh:ro
+      - ../docker/certbot/entrypoint.sh:/entrypoint.sh:ro,z
     ports:
       - "80:80"
 
@@ -26,7 +26,7 @@ services:
       FMSGID_READER_PGPASSWORD: ${FMSGID_READER_PGPASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql
-      - ../docker/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ../docker/postgres/init:/docker-entrypoint-initdb.d:ro,z
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-postgres}"]
       interval: 10s

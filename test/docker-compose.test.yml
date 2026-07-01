@@ -15,7 +15,6 @@ services:
     entrypoint: ["true"]
     restart: "no"
     ports: !override []
-    profiles: ["certbot"]
 
   fmsgd:
     environment:
@@ -23,12 +22,10 @@ services:
       FMSG_TLS_KEY: /opt/fmsg/tls/fmsg.${FMSG_DOMAIN}.key
       FMSG_TLS_INSECURE_SKIP_VERIFY: "true"
     volumes:
-      - ../test/.tls:/opt/fmsg/tls:ro
-    depends_on: !override
-      postgres:
-        condition: service_healthy
-      fmsgid:
-        condition: service_started
+      - ../test/.tls:/opt/fmsg/tls:ro,z
+    # Short (list) form so this fully replaces the base depends_on (dropping
+    # certbot, which is stubbed out below) instead of merging with it.
+    depends_on: !override [postgres, fmsgid]
     networks:
       default:
       fmsg-test:
@@ -40,14 +37,11 @@ services:
     environment:
       FMSG_TLS_CERT: ""
       FMSG_TLS_KEY: ""
-    depends_on: !override
-      fmsgd:
-        condition: service_started
-      fmsgid:
-        condition: service_started
+    depends_on: !override [fmsgd, fmsgid]
     ports: !override
       - "${FMSG_WEBAPI_HOST_PORT:-8081}:${FMSG_API_PORT:-8000}"
 
 networks:
+  default:
   fmsg-test:
     external: true
