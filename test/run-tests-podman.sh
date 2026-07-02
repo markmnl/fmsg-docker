@@ -53,8 +53,47 @@ def repl(match):
     return default if default is not None else ''
 
 
+def resolve_vars(text):
+    return PATTERN.sub(repl, text)
+
+
+# podman-compose (1.6.0) can't parse the long (mapping) form of `depends_on`
+# with `condition:` entries under an `!override` tag, so collapse it to the
+# short list form it does understand. Docker Compose keeps using the
+# original file with the healthcheck conditions intact.
+DEPENDS_ON_RE = re.compile(r'^(\s*)depends_on:\s*!override\s*$')
+KEY_RE = re.compile(r'^(\s+)([A-Za-z0-9_.-]+):\s*$')
+CONDITION_RE = re.compile(r'^\s+condition:\s*\S+\s*$')
+
+
+def flatten_depends_on(text):
+    lines = text.split('\n')
+    out = []
+    i = 0
+    while i < len(lines):
+        m = DEPENDS_ON_RE.match(lines[i])
+        if not m:
+            out.append(lines[i])
+            i += 1
+            continue
+        base_indent = m.group(1)
+        i += 1
+        keys = []
+        while i < len(lines):
+            km = KEY_RE.match(lines[i])
+            if km and len(km.group(1)) > len(base_indent):
+                keys.append(km.group(2))
+                i += 1
+                while i < len(lines) and CONDITION_RE.match(lines[i]):
+                    i += 1
+                continue
+            break
+        out.append('{}depends_on: !override [{}]'.format(base_indent, ', '.join(keys)))
+    return '\n'.join(out)
+
+
 text = open(sys.argv[1]).read()
-sys.stdout.write(PATTERN.sub(repl, text))
+sys.stdout.write(flatten_depends_on(resolve_vars(text)))
 EOF
 
 cat > "$SHIM_DIR/docker" <<EOF

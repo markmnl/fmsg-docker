@@ -23,9 +23,14 @@ services:
       FMSG_TLS_INSECURE_SKIP_VERIFY: "true"
     volumes:
       - ../test/.tls:/opt/fmsg/tls:ro,z
-    # Short (list) form so this fully replaces the base depends_on (dropping
-    # certbot, which is stubbed out below) instead of merging with it.
-    depends_on: !override [postgres, fmsgid]
+    # Fully replaces the base depends_on (dropping certbot, which is stubbed
+    # out below) instead of merging with it, while still waiting on
+    # postgres's healthcheck so fmsgd doesn't race it on startup.
+    depends_on: !override
+      postgres:
+        condition: service_healthy
+      fmsgid:
+        condition: service_started
     networks:
       default:
       fmsg-test:
@@ -37,7 +42,11 @@ services:
     environment:
       FMSG_TLS_CERT: ""
       FMSG_TLS_KEY: ""
-    depends_on: !override [fmsgd, fmsgid]
+    depends_on: !override
+      fmsgd:
+        condition: service_started
+      fmsgid:
+        condition: service_started
     ports: !override
       - "${FMSG_WEBAPI_HOST_PORT:-8081}:${FMSG_API_PORT:-8000}"
 
