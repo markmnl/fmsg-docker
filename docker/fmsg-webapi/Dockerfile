@@ -16,7 +16,8 @@ WORKDIR /opt/fmsg-webapi
 
 COPY --from=builder /build/fmsg-webapi /opt/fmsg-webapi/fmsg-webapi
 
-RUN chown -R fmsg:fmsg /opt/fmsg-webapi
+RUN mkdir -p /opt/fmsg/data && \
+    chown -R fmsg:fmsg /opt/fmsg-webapi /opt/fmsg/data
 
 USER fmsg
 

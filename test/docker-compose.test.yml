@@ -15,6 +15,9 @@ services:
     entrypoint: ["true"]
     restart: "no"
     ports: !override []
+    # Gate certbot behind a profile that's never activated so `compose up`
+    # never starts it at all. Without this, Docker Compose's `--wait` treats
+    # the stub's intentional immediate exit as an unexpected failure.
     profiles: ["certbot"]
 
   fmsgd:
@@ -23,7 +26,10 @@ services:
       FMSG_TLS_KEY: /opt/fmsg/tls/fmsg.${FMSG_DOMAIN}.key
       FMSG_TLS_INSECURE_SKIP_VERIFY: "true"
     volumes:
-      - ../test/.tls:/opt/fmsg/tls:ro
+      - ../test/.tls:/opt/fmsg/tls:ro,z
+    # Fully replaces the base depends_on (dropping certbot, which is stubbed
+    # out below) instead of merging with it, while still waiting on
+    # postgres's healthcheck so fmsgd doesn't race it on startup.
     depends_on: !override
       postgres:
         condition: service_healthy
@@ -49,5 +55,6 @@ services:
       - "${FMSG_WEBAPI_HOST_PORT:-8081}:${FMSG_API_PORT:-8000}"
 
 networks:
+  default:
   fmsg-test:
     external: true
