@@ -11,6 +11,15 @@
 #  - values under a YAML `!override` tag are not passed through variable
 #    interpolation, so `${VAR:-default}` references inside an `!override`
 #    block reach podman literally. The shim pre-resolves those itself.
+#  - the long (mapping) form of `depends_on` with `condition:` entries under
+#    an `!override` tag isn't parsed correctly, so the shim collapses it to
+#    the short list form podman-compose understands (Docker Compose keeps
+#    using the file as-is, conditions intact).
+#  - `profiles:` under an `!override` tag also isn't parsed correctly, so
+#    the shim strips it. This is harmless for podman: the shim already
+#    strips `--wait` (see below), so certbot's stub exiting immediately
+#    doesn't need to be gated behind an inactive profile the way it does
+#    for Docker Compose.
 #  - `up --wait` runs `podman wait --condition=running` for every service
 #    without a healthcheck, including one-shot containers (like certbot
 #    here) that are expected to exit — so it hangs forever. The shim strips
@@ -92,8 +101,15 @@ def flatten_depends_on(text):
     return '\n'.join(out)
 
 
+PROFILES_RE = re.compile(r'^\s*profiles:\s*\[.*\]\s*$')
+
+
+def drop_profiles(text):
+    return '\n'.join(line for line in text.split('\n') if not PROFILES_RE.match(line))
+
+
 text = open(sys.argv[1]).read()
-sys.stdout.write(flatten_depends_on(resolve_vars(text)))
+sys.stdout.write(drop_profiles(flatten_depends_on(resolve_vars(text))))
 EOF
 
 cat > "$SHIM_DIR/docker" <<EOF

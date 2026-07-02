@@ -15,6 +15,10 @@ services:
     entrypoint: ["true"]
     restart: "no"
     ports: !override []
+    # Gate certbot behind a profile that's never activated so `compose up`
+    # never starts it at all. Without this, Docker Compose's `--wait` treats
+    # the stub's intentional immediate exit as an unexpected failure.
+    profiles: ["certbot"]
 
   fmsgd:
     environment:
