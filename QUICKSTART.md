@@ -13,16 +13,18 @@ Read the [README.md](https://github.com/markmnl/fmsg-docker) of this repo for mo
     1. TCP port `4930` open to the internet (fmsg TLS)
     2. TCP port `443` open to the internet (fmsg-webapi HTTPS)
     3. TCP port `80` open to the internet (only first start - required for initial Let's Encrypt certificate issuance)
-3. Docker and Docker Compose
+3. Docker and Docker Compose, or Podman and podman-compose
 
 ## Steps
 
 ### 0. Server Setup
 
-Clone this repository to the server and make sure docker is running.
+Clone this repository to the server and make sure docker (or podman) is running.
 ```
 git clone https://github.com/markmnl/fmsg-docker.git
 ```
+
+_NOTE_ This quickstart shows `docker compose` commands throughout. If you are using Podman instead, substitute `podman compose` (or `podman-compose`, depending on your install) for every `docker compose` command below.
 
 ### 1. Configure DNS
 
