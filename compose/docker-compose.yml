@@ -18,7 +18,8 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${PGUSER:-postgres}
-      POSTGRES_PASSWORD: ${PGPASSWORD}
+      # Required by the image only while initializing an empty data volume.
+      POSTGRES_PASSWORD: ${PGPASSWORD:-}
       POSTGRES_DB: postgres
       FMSGD_WRITER_PGPASSWORD: ${FMSGD_WRITER_PGPASSWORD}
       FMSGD_READER_PGPASSWORD: ${FMSGD_READER_PGPASSWORD}

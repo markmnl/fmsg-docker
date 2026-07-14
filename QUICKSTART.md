@@ -1,8 +1,8 @@
 # Quickstart - Setting up an fmsg host with fmsg-docker
 
-This quickstart gets the docker compose stack from this repository up and running on your server. TLS provisioning is included and an HTTPS API is exposed so you can start sending and receiving fmsg messages for your domain. TCP port 4930 is also exposed for fmsg host-to-host communication.
+This quickstart gets the docker compose stack from this repository up and running on your public fmsg server.
 
-To learn more about fmsg, see the documentation repository: [fmsg](https://github.com/markmnl/fmsg).
+TLS provisioning is included and an HTTPS API is exposed so you can start sending and receiving fmsg messages for your domain. TCP port 4930 is also exposed for fmsg host-to-host communication.
 
 Read the [README.md](https://github.com/markmnl/fmsg-docker) of this repo for more about settings and environment being used in this quickstart.
 
@@ -17,14 +17,19 @@ Read the [README.md](https://github.com/markmnl/fmsg-docker) of this repo for mo
 
 ## Steps
 
+_NOTE_ This quickstart uses `docker compose` throughout. If you are using Podman, replace each occurrence with `podman compose`.
+
 ### 0. Server Setup
 
-Clone this repository to the server and make sure docker (or podman) is running.
-```
-git clone https://github.com/markmnl/fmsg-docker.git
+Make sure Docker is installed and running. Create a dedicated non-root `fmsg` operator account, create its checkout location, and shallow-clone the repository's default branch:
+
+```sh
+sudo useradd --create-home --shell /bin/bash fmsg
+sudo install -d --owner=fmsg --group=fmsg /opt/fmsg-docker
+sudo -u fmsg git clone --depth 1 https://github.com/markmnl/fmsg-docker.git /opt/fmsg-docker
+sudo -u fmsg -H bash
 ```
 
-_NOTE_ This quickstart shows `docker compose` commands throughout. If you are using Podman instead, substitute `podman compose` (or `podman-compose`, depending on your install) for every `docker compose` command below.
 
 ### 1. Configure DNS
 
@@ -37,9 +42,10 @@ _NOTE_ Ensure DNS is kept up-to-date with your server's IP so you can send and r
 
 ### 2. Configure FMSG
 
-Copy the example env file:
+As the `fmsg` user, configure the checkout in `/opt/fmsg-docker`. Copy the example env file:
 
 ```sh
+cd /opt/fmsg-docker
 cp .env.example compose/.env
 ```
 
@@ -49,7 +55,9 @@ Edit `compose/.env` and set at least:
 FMSG_DOMAIN=example.com
 CERTBOT_EMAIL=
 FMSG_API_TOKEN_ED25519_PRIVATE_KEY=<base64-ed25519-seed>
+FMSGD_READER_PGPASSWORD=<strong-password>
 FMSGD_WRITER_PGPASSWORD=<strong-password>
+FMSGD_READER_PGPASSWORD=<strong-password>
 FMSGID_WRITER_PGPASSWORD=<strong-password>
 ```
 
@@ -59,21 +67,24 @@ _NOTE_
 * Generate `FMSG_API_TOKEN_ED25519_PRIVATE_KEY` with `openssl rand -base64 32`.
 * For all secrets and passwords env vars create your own.
 
-Start the stack for the first time from `compose/` and pass the one-time init passwords on the command line (keep these secret, keep them safe):
 
-(might require sudo)
+Exit the fmsg login shell and start the stack for the first time by changing into `/opt/fmsg-docker/compose` and passing the one-time postgres super user password on the command line. (Generate and keep PGPASSWORD yourself, this will only be needed first time running compose up).
 
 ```sh
-cd compose
-PGPASSWORD=<postgres-password> \
-FMSGD_READER_PGPASSWORD=<strong-password> \
-FMSGID_READER_PGPASSWORD=<strong-password> \
-docker compose up -d
+exit
+cd /opt/fmsg-docker/compose
+sudo env PGPASSWORD='<postgres-password>' docker compose up -d
+```
+
+First time will take a few minutes to pull docker images and initalise the database. After than check everything started with:
+
+```
+sudo docker compose ps
 ```
 
 If `fmsgd` is running and port `4930` is reachable on `fmsg.<your domain>`, the host is up.
 
-On first start, certbot will request Let's Encrypt TLS certificates for `fmsg.<your-domain>` and `fmsgapi.<your-domain>`. If certificate issuance fails (e.g. the domains do not resolve to the server or port 80 is blocked), the stack will not start. Certificates are persisted in a Docker volume and reused on subsequent starts. Once certificates are issued port 80 is no longer needed until certificates need to be renewed - usually 90 days.
+On first start, certbot will request Let's Encrypt TLS certificates for `fmsg.<your-domain>` and `fmsgapi.<your-domain>`. If certificate issuance fails (e.g. the domains do not resolve to the server or port 80 is blocked by firewall, or already in use), the stack will not start. Certificates are persisted in a Docker volume and reused on subsequent starts. Once certificates are issued port 80 is no longer needed until certificates need to be renewed - usually 90 days.
 
 
 ## Next Steps
@@ -90,24 +101,56 @@ address,display_name,accepting_new,limit_recv_size_total,limit_recv_size_per_msg
 You can copy it into the volume with (file changes will sync automatically):
 
 ```sh
-docker compose cp addresses.csv fmsgid:/opt/fmsgid/data/addresses.csv
+sudo docker compose cp addresses.csv fmsgid:/opt/fmsgid/data/addresses.csv
 ```
 
 ### Connect a Client
 
-Create or rotate an API key with the fmsg-webapi operator command, then use it with [fmsg-cli](https://github.com/markmnl/fmsg-cli):
+Create an API key for a user, then use it with [fmsg-cli](https://github.com/markmnl/fmsg-cli) or access the [fmsg-webapi](https://github.com/markmnl/fmsg-webapi) API directly at `https://fmsgapi.<your-domain>`.
+
+To create an API key for `@alice@example.com`:
 
 ```sh
-docker compose exec fmsg-webapi /opt/fmsg-webapi/fmsg-webapi api-key create-delegation \
+sudo docker compose exec fmsg-webapi /opt/fmsg-webapi/fmsg-webapi api-key create-delegation \
   -owner @alice@example.com \
   -agent cli \
   -addr @alice@example.com \
-  -cidr 203.0.113.0/24 \
-  -expires 2026-12-31T00:00:00Z
+  -cidr 0.0.0.0/0,::/0 \
+  -expires 2027-12-31T00:00:00Z
 
-FMSG_API_URL=https://fmsgapi.example.com \
-FMSG_API_KEY=fmsgk_<key_id>_<secret> \
-fmsg list
 ```
 
-The API key plaintext is printed once when created or rotated. Store it securely and pass it to automated clients through `FMSG_API_KEY`.
+The command prints the plaintext API key only once. Store it securely. The `owner` and `addr` are the same, so the key authenticates as `@alice@example.com`; it does not impersonate another user. The CIDR values permit connections from any IPv4 or IPv6 address. Restrict them when the deployment is ready for production use.
+
+Then use it from fmsg-cli:
+
+```sh
+export FMSG_API_URL=https://fmsgapi.<your-domain>
+
+fmsg login <fmsg-key>
+
+fmsg list
+fmsg send @recipient@example.com "Hello, world!"
+fmsg send @recipient@example.com ./message.txt
+echo "Hello via stdin" | fmsg send @recipient@example.com -
+```
+
+To use the API directly, exchange the API key for a short-lived JWT:
+
+```sh
+export FMSG_API_URL=https://fmsgapi.<your-domain>
+export FMSG_API_KEY=fmsgk_<key_id>_<secret>
+
+curl --fail --silent --show-error \
+  -X POST \
+  -H "Authorization: Bearer $FMSG_API_KEY" \
+  "$FMSG_API_URL/fmsg/token"
+```
+
+The response contains an `access_token`. Send it as a Bearer token with API requests:
+
+```sh
+curl --fail --silent --show-error \
+  -H "Authorization: Bearer <access_token>" \
+  "$FMSG_API_URL/fmsg"
+```
