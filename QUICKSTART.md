@@ -120,11 +120,14 @@ sudo docker compose exec fmsg-webapi /opt/fmsg-webapi/fmsg-webapi api-key create
 
 ```
 
-The command prints the plaintext API key only once. Store it securely. The `owner` and `addr` are the same, so the key authenticates as `@alice@example.com`; it does not impersonate another user. The CIDR values permit connections from any IPv4 or IPv6 address. Restrict them when the deployment is ready for production use.
+* The command prints the plaintext API key only once. Store it securely.
+* `owner` and `addr` are the same, so the key authenticates as `@alice@example.com` in the above example.
+* CIDR values: `-cidr 0.0.0.0/0,::/0` permit connections from any IPv4 or IPv6 address, restrict per your requirements.
 
 Then use it from fmsg-cli:
 
 ```sh
+# save this export line to your ~/.bash_profile for future use
 export FMSG_API_URL=https://fmsgapi.<your-domain>
 
 fmsg login <fmsg-key>
@@ -135,7 +138,8 @@ fmsg send @recipient@example.com ./message.txt
 echo "Hello via stdin" | fmsg send @recipient@example.com -
 ```
 
-To use the API directly, exchange the API key for a short-lived JWT:
+
+To use the API directly instead of fmsg-cli (which uses the API under the hood), exchange the API key for a short-lived JWT:
 
 ```sh
 export FMSG_API_URL=https://fmsgapi.<your-domain>
