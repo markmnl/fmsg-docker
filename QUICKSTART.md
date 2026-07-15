@@ -4,7 +4,14 @@ This quickstart gets the docker compose stack from this repository up and runnin
 
 TLS provisioning is included and an HTTPS API is exposed so you can start sending and receiving fmsg messages for your domain. TCP port 4930 is also exposed for fmsg host-to-host communication.
 
-Read the [README.md](https://github.com/markmnl/fmsg-docker) of this repo for more about settings and environment being used in this quickstart.
+
+## Other Docs
+
+| Name                                       | Description                                                        |
+|--------------------------------------------|--------------------------------------------------------------------|
+| [README.md](README.md)                     | Full README for this code repository.                              |
+| [README_LOCAL_DEV.md](README_LOCAL_DEV.md) | Run the stack locally for development purposes.                    |
+
 
 ## Requirements
 

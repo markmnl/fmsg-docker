@@ -12,6 +12,17 @@ This is basically the same trick `test/docker-compose.test.yml` and `test/run-te
 use for integration tests (self-signed certs + `FMSG_SKIP_DOMAIN_IP_CHECK` + certbot disabled),
 just simplified to a single instance for interactive local dev.
 
+
+## Other Docs
+
+| Name                                       | Description                                                        |
+|--------------------------------------------|--------------------------------------------------------------------|
+| [QUICKSTART.md](QUICKSTART.md)             | Get a production stack up and running on your server in minutes.   |
+| [README.md](README.md)                     | Full README for this code repository.                    |
+
+
+**NB:** Can run `./scripts/run-local.dev.sh` to perform the below
+
 ## 1. Podman setup
 
 Docker Compose files work unmodified with Podman via the `podman-compose` project, or with
