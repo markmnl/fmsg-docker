@@ -32,6 +32,9 @@ repo_root="$(cd -- "$script_dir/.." && pwd)"
 compose_dir="$repo_root/compose"
 local_override="$repo_root/.bin/local-dev/docker-compose.local-dev.yml"
 
+# shellcheck source=lib-container-engine.sh
+source "$script_dir/lib-container-engine.sh"
+
 if [[ $# -gt 1 ]]; then
   usage
   exit 1
@@ -80,8 +83,7 @@ if [[ -f "$local_override" ]]; then
   compose_files+=(-f "$local_override")
 fi
 
-require_command docker
-docker compose version >/dev/null
+select_container_engine
 
 cd "$compose_dir"
 

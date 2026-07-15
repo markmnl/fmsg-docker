@@ -36,6 +36,9 @@ compose_dir="$repo_root/compose"
 local_dev_dir="$repo_root/.bin/local-dev"
 local_override="$local_dev_dir/docker-compose.local-dev.yml"
 
+# shellcheck source=lib-container-engine.sh
+source "$script_dir/lib-container-engine.sh"
+
 if [[ $# -gt 1 ]]; then
   usage
   exit 1
@@ -84,8 +87,7 @@ if [[ -f "$local_override" ]]; then
   compose_files+=(-f "$local_override")
 fi
 
-require_command docker
-docker compose version >/dev/null
+select_container_engine
 
 cd "$compose_dir"
 
@@ -99,7 +101,7 @@ rm -rf "$local_dev_dir"
 
 if docker network inspect fmsg-local >/dev/null 2>&1; then
   docker network rm fmsg-local >/dev/null 2>&1 || \
-    echo "==> Shared Docker network fmsg-local is still in use; leaving it in place."
+    echo "==> Shared container network fmsg-local is still in use; leaving it in place."
 fi
 
 echo "==> Local fmsg stack deleted. Compose volumes and generated local files were removed."

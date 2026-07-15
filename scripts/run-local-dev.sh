@@ -31,7 +31,7 @@
 #   fmsg-webapi validates JWTs using a separate local IdP. The issuer is
 #   the host-facing URL (default http://localhost:8080). The JWKS URL must
 #   be reachable from inside the fmsg-webapi container, so the default uses
-#   host.docker.internal rather than localhost.
+#   the selected container engine's host gateway rather than localhost.
 # =============================================================
 set -euo pipefail
 
@@ -49,9 +49,10 @@ Environment overrides:
   FMSG_PORT                  default: 4930
   FMSG_WEBAPI_HOST_PORT      default: 8181
   POSTGRES_HOST_PORT         default: 54321
-  FMSG_JWT_JWKS_URL          default: http://host.docker.internal:8080/.well-known/jwks.json
+  FMSG_JWT_JWKS_URL          default: selected engine's host gateway on port 8080
   IDP_JWT_ISSUER             default: http://localhost:8080
   FMSG_JWT_ISSUER            default: value of IDP_JWT_ISSUER
+  FMSG_JWT_ADDRESS_CLAIM     default: fmsg_address
   FMSG_CORS_ORIGINS          default: http://localhost:8081
   FMSG_ADDRESSES_CSV         optional path/template copied to fmsgid addresses.csv
   FMSGD_WRITER_PGPASSWORD    default: test
@@ -96,6 +97,9 @@ local_dev_dir="$repo_root/.bin/local-dev"
 tls_dir="$local_dev_dir/tls"
 local_override="$local_dev_dir/docker-compose.local-dev.yml"
 
+# shellcheck source=lib-container-engine.sh
+source "$script_dir/lib-container-engine.sh"
+
 if [[ $# -gt 2 ]]; then
   usage
   exit 1
@@ -120,6 +124,8 @@ if [[ "$domain" == fmsg.* || "$domain" == fmsgapi.* ]]; then
   exit 1
 fi
 
+select_container_engine
+
 if [[ -n "$addresses_csv" && "$addresses_csv" != /* && ! "$addresses_csv" =~ ^[A-Za-z]: ]]; then
   addresses_csv="$initial_dir/$addresses_csv"
 fi
@@ -131,7 +137,8 @@ export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-fmsg_${sanitized_domain}}"
 export CERTBOT_EMAIL="${CERTBOT_EMAIL:-local-dev@${domain}}"
 export IDP_JWT_ISSUER="${IDP_JWT_ISSUER:-http://localhost:8080}"
 export FMSG_JWT_ISSUER="${FMSG_JWT_ISSUER:-$IDP_JWT_ISSUER}"
-export FMSG_JWT_JWKS_URL="${FMSG_JWT_JWKS_URL:-http://host.docker.internal:8080/.well-known/jwks.json}"
+export FMSG_JWT_JWKS_URL="${FMSG_JWT_JWKS_URL:-http://${CONTAINER_HOST_GATEWAY}:8080/.well-known/jwks.json}"
+export FMSG_JWT_ADDRESS_CLAIM="${FMSG_JWT_ADDRESS_CLAIM:-fmsg_address}"
 export FMSG_CORS_ORIGINS="${FMSG_CORS_ORIGINS:-http://localhost:8081}"
 export FMSG_API_JWT_SECRET="${FMSG_API_JWT_SECRET:-}"
 export FMSG_PORT="${FMSG_PORT:-4930}"
@@ -149,9 +156,6 @@ export FMSGID_READER_PGPASSWORD="${FMSGID_READER_PGPASSWORD:-test}"
 export FMSG_SKIP_DOMAIN_IP_CHECK="${FMSG_SKIP_DOMAIN_IP_CHECK:-true}"
 export FMSG_SKIP_AUTHORISED_IPS="${FMSG_SKIP_AUTHORISED_IPS:-true}"
 export FMSG_TLS_INSECURE_SKIP_VERIFY="${FMSG_TLS_INSECURE_SKIP_VERIFY:-true}"
-
-require_command docker
-docker compose version >/dev/null
 
 cd "$compose_dir"
 
@@ -185,7 +189,7 @@ fi
 require_command openssl
 
 if ! docker network inspect fmsg-local >/dev/null 2>&1; then
-  echo "==> Creating shared Docker network: fmsg-local"
+  echo "==> Creating shared container network: fmsg-local"
   docker network create fmsg-local >/dev/null
 fi
 
@@ -227,7 +231,7 @@ services:
       FMSG_TLS_KEY: /opt/fmsg/tls/fmsg.${FMSG_DOMAIN}.key
       FMSG_TLS_INSECURE_SKIP_VERIFY: "${FMSG_TLS_INSECURE_SKIP_VERIFY}"
     volumes:
-      - "${tls_dir}:/opt/fmsg/tls:ro"
+      - "${tls_dir}:/opt/fmsg/tls:ro,z"
     depends_on: !override
       postgres:
         condition: service_healthy
@@ -264,6 +268,7 @@ services:
           - fmsgapi.${FMSG_DOMAIN}
 
 networks:
+  default: {}
   fmsg-local:
     external: true
     name: fmsg-local
