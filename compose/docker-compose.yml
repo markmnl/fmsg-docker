@@ -1,7 +1,7 @@
 services:
 
   certbot:
-    image: certbot/certbot
+    image: docker.io/certbot/certbot
     restart: "no"
     entrypoint: ["/bin/sh", "/entrypoint.sh"]
     environment:
@@ -14,11 +14,12 @@ services:
       - "80:80"
 
   postgres:
-    image: postgres:18-alpine
+    image: docker.io/library/postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${PGUSER:-postgres}
-      POSTGRES_PASSWORD: ${PGPASSWORD}
+      # Required by the image only while initializing an empty data volume.
+      POSTGRES_PASSWORD: ${PGPASSWORD:-}
       POSTGRES_DB: postgres
       FMSGD_WRITER_PGPASSWORD: ${FMSGD_WRITER_PGPASSWORD}
       FMSGD_READER_PGPASSWORD: ${FMSGD_READER_PGPASSWORD}

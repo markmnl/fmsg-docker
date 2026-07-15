@@ -1,0 +1,45 @@
+services:
+  certbot:
+    entrypoint: ["true"]
+    restart: "no"
+    ports: !override []
+
+  postgres:
+    security_opt:
+      - label=disable
+    ports:
+      - "5432:5432"
+
+  fmsgd:
+    environment:
+      FMSG_TLS_CERT: /opt/fmsg/tls/fmsg.${FMSG_DOMAIN}.crt
+      FMSG_TLS_KEY: /opt/fmsg/tls/fmsg.${FMSG_DOMAIN}.key
+    security_opt:
+      - label=disable
+    volumes:
+      - ../test/.tls:/opt/fmsg/tls:ro
+    depends_on:
+      postgres:
+        condition: service_started
+      fmsgid:
+        condition: service_started
+    extra_hosts:
+      - "fmsgapi.local.test:127.0.0.1"
+
+  fmsg-webapi:
+    environment:
+      FMSG_TLS_CERT: /opt/fmsg/tls/fmsgapi.${FMSG_DOMAIN}.crt
+      FMSG_TLS_KEY: /opt/fmsg/tls/fmsgapi.${FMSG_DOMAIN}.key
+    security_opt:
+      - label=disable
+    volumes:
+      - ../test/.tls:/opt/fmsg/tls:ro
+    depends_on:
+      fmsgd:
+        condition: service_started
+      fmsgid:
+        condition: service_started
+    ports: !override
+      - "8443:8000"
+    extra_hosts:
+      - "fmsg.local.test:127.0.0.1"
