@@ -5,14 +5,6 @@
 Dockerised stack composing a full fmsg setup including: [fmsgd](https://github.com/markmnl/fmsgd), [fmsgid](https://github.com/markmnl/fmsgid) and [fmsg-webapi](https://github.com/markmnl/fmsg-webapi)
 
 
-## Other Docs
-
-| Name                                       | Description                                                        |
-|--------------------------------------------|--------------------------------------------------------------------|
-| [QUICKSTART.md](QUICKSTART.md)             | Get a production stack up and running on your server in minutes.   |
-| [README_LOCAL_DEV.md](README_LOCAL_DEV.md) | Run the stack locally for development purposes.                    |
-
-
 <div align="center">
    <picture>
       <source media="(prefers-color-scheme: dark)" srcset="docs/fmsg-docker-dark.png">
@@ -20,6 +12,14 @@ Dockerised stack composing a full fmsg setup including: [fmsgd](https://github.c
       <img alt="fmsg-docker diagram" src="docs/fmsg-docker-dark.png">
    </picture>
 </div>
+
+## Other Docs
+
+| Name                                       | Description                                                        |
+|--------------------------------------------|--------------------------------------------------------------------|
+| [QUICKSTART.md](QUICKSTART.md)             | Get a production stack up and running on your server in minutes.   |
+| [README_LOCAL_DEV.md](README_LOCAL_DEV.md) | Run the stack locally for development purposes.                    |
+
 
 ## Contents
 
