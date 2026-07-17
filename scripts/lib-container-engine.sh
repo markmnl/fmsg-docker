@@ -139,3 +139,17 @@ EOF
 
   export PATH="$container_engine_shim_dir:$PATH"
 }
+
+compose_service_container_id() {
+  local service_name="$1"
+
+  if [[ "$CONTAINER_ENGINE" == "docker" ]]; then
+    docker ps -q \
+      --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME" \
+      --filter "label=com.docker.compose.service=$service_name"
+  else
+    podman ps -q \
+      --filter "label=io.podman.compose.project=$COMPOSE_PROJECT_NAME" \
+      --filter "label=io.podman.compose.service=$service_name"
+  fi
+}

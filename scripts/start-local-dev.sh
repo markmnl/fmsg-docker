@@ -1,48 +1,18 @@
 #!/usr/bin/env bash
 # =============================================================
 # Run the fmsg compose stack for local development.
-#
-# DNS / hosts setup:
-#   Pick a base domain such as hairpin.local. FMSG_DOMAIN must be
-#   the base domain, not fmsg.hairpin.local.
-#
-#   Add the base name and service names to your OS hosts file so
-#   tools on the host resolve them to localhost:
-#
-#     127.0.0.1 hairpin.local fmsg.hairpin.local fmsgapi.hairpin.local
-#
-#   Windows hosts file:
-#     C:\Windows\System32\drivers\etc\hosts
-#
-#   Linux/macOS hosts file:
-#     /etc/hosts
-#
-# TLS notes:
-#   fmsgd requires TCP+TLS, so this script generates a self-signed
-#   certificate for fmsg.<domain> and mounts it into the fmsgd container.
-#   Local outbound certificate verification is skipped with
-#   FMSG_TLS_INSECURE_SKIP_VERIFY=true.
-#
-#   fmsg-webapi supports plain HTTP for development when FMSG_TLS_CERT
-#   and FMSG_TLS_KEY are omitted, so this script disables webapi TLS and
-#   exposes it on http://localhost:${FMSG_WEBAPI_HOST_PORT:-8181}.
-#
-# JWT notes:
-#   fmsg-webapi validates JWTs using a separate local IdP. The issuer is
-#   the host-facing URL (default http://localhost:8080). The JWKS URL must
-#   be reachable from inside the fmsg-webapi container, so the default uses
-#   the selected container engine's host gateway rather than localhost.
 # =============================================================
 set -euo pipefail
 
 usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/run-local-dev.sh [domain] [addresses.csv]
+  ./scripts/start-local-dev.sh [domain] [addresses.csv]
 
 Examples:
-  ./scripts/run-local-dev.sh hairpin.local
-  ./scripts/run-local-dev.sh hairpin.local ./addresses.csv
+  ./scripts/start-local-dev.sh
+  ./scripts/start-local-dev.sh hairpin.local
+  ./scripts/start-local-dev.sh hairpin.local ./addresses.csv
 
 Environment overrides:
   COMPOSE_PROJECT_NAME       default: fmsg_<domain_with_underscores>
@@ -80,13 +50,43 @@ Local fmsg stack is running.
 Client environment for fmsg-cli:
   export FMSG_API_URL=http://localhost:$FMSG_WEBAPI_HOST_PORT
 
-JWTs must be issued by the local IdP:
-  issuer: $FMSG_JWT_ISSUER
-
-Example:
-  fmsg login @alice@$FMSG_DOMAIN
-  fmsg list
+Create an API key for the seeded @alice@$FMSG_DOMAIN address and log in:
 EOF
+  printf '  fmsg login "$(%q %q %q)"\n' \
+    "$repo_root/scripts/create-local-dev-api-key.sh" "$FMSG_DOMAIN" "@alice@$FMSG_DOMAIN"
+  cat <<EOF
+
+Then try the API:
+  fmsg list
+  fmsg send @bob@$FMSG_DOMAIN "Hello from local development"
+EOF
+}
+
+wait_for_seeded_addresses() {
+  local postgres_container_id
+  local address_count
+  local attempt
+
+  postgres_container_id="$(compose_service_container_id postgres)"
+  if [[ -z "$postgres_container_id" ]]; then
+    echo "Postgres container was not found while waiting for addresses.csv import." >&2
+    exit 1
+  fi
+
+  for ((attempt = 1; attempt <= 30; attempt++)); do
+    address_count="$(docker exec "$postgres_container_id" \
+      psql -U "$PGUSER" -d fmsgid -Atqc 'SELECT count(*) FROM address' 2>/dev/null || true)"
+    address_count="${address_count//[[:space:]]/}"
+
+    if [[ "$address_count" =~ ^[1-9][0-9]*$ ]]; then
+      return
+    fi
+
+    sleep 1
+  done
+
+  echo "Timed out waiting for fmsgid to import addresses.csv." >&2
+  exit 1
 }
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -96,6 +96,7 @@ initial_dir="$PWD"
 local_dev_dir="$repo_root/.bin/local-dev"
 tls_dir="$local_dev_dir/tls"
 local_override="$local_dev_dir/docker-compose.local-dev.yml"
+api_token_key_file="$local_dev_dir/api-token-ed25519-private-key"
 
 # shellcheck source=lib-container-engine.sh
 source "$script_dir/lib-container-engine.sh"
@@ -114,8 +115,7 @@ if [[ "$domain" == "-h" || "$domain" == "--help" ]]; then
 fi
 
 if [[ -z "$domain" ]]; then
-  read -r -p "Local fmsg domain [hairpin.local]: " domain
-  domain="${domain:-hairpin.local}"
+  domain="hairpin.local"
 fi
 
 if [[ "$domain" == fmsg.* || "$domain" == fmsgapi.* ]]; then
@@ -125,6 +125,18 @@ if [[ "$domain" == fmsg.* || "$domain" == fmsgapi.* ]]; then
 fi
 
 select_container_engine
+
+require_command openssl
+mkdir -p "$local_dev_dir"
+
+if [[ -z "${FMSG_API_TOKEN_ED25519_PRIVATE_KEY:-}" ]]; then
+  if [[ ! -s "$api_token_key_file" ]]; then
+    openssl rand -base64 32 > "$api_token_key_file"
+    chmod 0600 "$api_token_key_file"
+  fi
+
+  export FMSG_API_TOKEN_ED25519_PRIVATE_KEY="$(<"$api_token_key_file")"
+fi
 
 if [[ -n "$addresses_csv" && "$addresses_csv" != /* && ! "$addresses_csv" =~ ^[A-Za-z]: ]]; then
   addresses_csv="$initial_dir/$addresses_csv"
@@ -185,8 +197,6 @@ if [[ -f "$local_override" ]]; then
     fi
   fi
 fi
-
-require_command openssl
 
 if ! docker network inspect fmsg-local >/dev/null 2>&1; then
   echo "==> Creating shared container network: fmsg-local"
@@ -304,6 +314,7 @@ if [[ -n "$addresses_csv" ]]; then
   echo "==> Copying addresses CSV to fmsgid: $addresses_csv"
   docker compose -f docker-compose.yml -f "$local_override" cp \
     "$rendered_addresses_csv" fmsgid:/opt/fmsgid/data/addresses.csv
+  wait_for_seeded_addresses
 else
   echo "==> No addresses.csv copied. Set FMSG_ADDRESSES_CSV or pass a second argument to seed users."
 fi
