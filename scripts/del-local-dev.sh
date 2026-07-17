@@ -52,8 +52,7 @@ if [[ "$domain" == "-h" || "$domain" == "--help" ]]; then
 fi
 
 if [[ -z "$domain" ]]; then
-  read -r -p "Local fmsg domain [hairpin.local]: " domain
-  domain="${domain:-hairpin.local}"
+  domain="hairpin.local"
 fi
 
 if [[ "$domain" == fmsg.* || "$domain" == fmsgapi.* ]]; then
