@@ -2,10 +2,22 @@
 # Shared Docker-first / Podman-fallback support for local development scripts.
 
 select_container_engine() {
-  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+  local requested_engine="${FMSG_CONTAINER_ENGINE:-}"
+
+  if [[ -n "$requested_engine" && "$requested_engine" != "docker" && "$requested_engine" != "podman" ]]; then
+    echo "Invalid FMSG_CONTAINER_ENGINE: $requested_engine (expected docker or podman)" >&2
+    exit 1
+  fi
+
+  if [[ "$requested_engine" != "podman" ]] && command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
     CONTAINER_ENGINE="docker"
     CONTAINER_HOST_GATEWAY="host.docker.internal"
     return
+  fi
+
+  if [[ "$requested_engine" == "docker" ]]; then
+    echo "Docker Compose is unavailable but FMSG_CONTAINER_ENGINE=docker was requested." >&2
+    exit 1
   fi
 
   if ! command -v podman >/dev/null 2>&1; then
