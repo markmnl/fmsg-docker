@@ -102,6 +102,7 @@ services:
         CACHEBUST: ${CACHEBUST:-}
     restart: unless-stopped
     environment:
+      GIN_MODE: ${GIN_MODE:-release}
       FMSG_DOMAIN: ${FMSG_DOMAIN}
       FMSG_ID_URL: http://fmsgid:${FMSGID_PORT:-8080}
       FMSG_API_TOKEN_ED25519_PRIVATE_KEY: ${FMSG_API_TOKEN_ED25519_PRIVATE_KEY:-}
