@@ -177,6 +177,7 @@ if [[ -f "$local_override" ]]; then
 
   if grep -Fq -- "FMSG_JWT_JWKS_URL: \"${FMSG_JWT_JWKS_URL}\"" "$local_override" && \
     grep -Fq -- "FMSG_JWT_ISSUER: \"${FMSG_JWT_ISSUER}\"" "$local_override" && \
+    grep -Fq -- "FMSG_JWT_ADDRESS_CLAIM: \"${FMSG_JWT_ADDRESS_CLAIM}\"" "$local_override" && \
     grep -Fq -- "FMSG_CORS_ORIGINS: \"${FMSG_CORS_ORIGINS}\"" "$local_override" && \
     grep -Fq -- "- \"${POSTGRES_HOST_PORT}:5432\"" "$local_override" && \
     grep -Fq -- "- \"${FMSG_WEBAPI_HOST_PORT}:${FMSG_API_PORT}\"" "$local_override"; then
@@ -259,6 +260,7 @@ services:
       FMSG_API_JWT_SECRET: ""
       FMSG_JWT_JWKS_URL: "${FMSG_JWT_JWKS_URL}"
       FMSG_JWT_ISSUER: "${FMSG_JWT_ISSUER}"
+      FMSG_JWT_ADDRESS_CLAIM: "${FMSG_JWT_ADDRESS_CLAIM}"
       FMSG_CORS_ORIGINS: "${FMSG_CORS_ORIGINS}"
       FMSG_TLS_CERT: ""
       FMSG_TLS_KEY: ""
