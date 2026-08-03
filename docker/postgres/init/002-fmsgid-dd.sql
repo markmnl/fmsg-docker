@@ -4,6 +4,16 @@
  *
  * PostgreSQL database objects data definition for fmsgid
  *
+ * This script is IDEMPOTENT: every statement is safe to re-run
+ * (create table/index if not exists; alter table set storage
+ * parameters simply reapplies). Migrating an existing database is
+ * therefore just re-running the whole script, e.g.:
+ *
+ *   psql -d fmsgid -v ON_ERROR_STOP=1 -f dd.sql
+ *
+ * Keep it that way: add new objects and columns only with
+ * idempotent statements.
+ *
  ****************************************************************/
 
 -- database with encoding UTF8 should already be created and connected
@@ -31,7 +41,7 @@ create table if not exists address_tx (
 	primary key (address_lower, ts)
 );
 
-create index address_tx_addr_type_ts
+create index if not exists address_tx_addr_type_ts
 on address_tx (address_lower, type, ts desc);
 
 alter table address_tx set (
