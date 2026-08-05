@@ -121,10 +121,15 @@ if [ "\${1:-}" = "exec" ]; then
   for i in "\${!args[@]}"; do
     if [[ "\${args[\$i]}" != -* ]] && [ "\$i" != "0" ]; then
       name="\${args[\$i]}"
-      if [[ "\$name" == *-fmsg-webapi-* ]]; then
-        args[\$i]="\${name/-fmsg-webapi-/_fmsg-webapi_}"
-      else
-        args[\$i]="\${name//-/_}"
+      # Container naming depends on the compose provider: docker-compose
+      # keeps hyphens, podman-compose uses underscores. Only rewrite when
+      # the hyphenated name doesn't exist.
+      if ! podman container exists "\$name" 2>/dev/null; then
+        if [[ "\$name" == *-fmsg-webapi-* ]]; then
+          args[\$i]="\${name/-fmsg-webapi-/_fmsg-webapi_}"
+        else
+          args[\$i]="\${name//-/_}"
+        fi
       fi
       break
     fi

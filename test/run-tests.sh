@@ -214,6 +214,34 @@ fi
 export PATH="$(dirname "$FMSG_BIN"):$PATH"
 echo "==> fmsg CLI: $FMSG_BIN"
 
+# ── Build fmsg-mcp (Claude MCP server; driven over stdio by test 008) ──
+FMSG_MCP_REF=${FMSG_MCP_REF:-main}
+FMSG_MCP_BIN="$REPO_ROOT/test/.bin/fmsg-mcp"
+FMSG_MCP_REF_FILE="$REPO_ROOT/test/.bin/.fmsg-mcp-ref"
+NEED_BUILD_MCP=true
+
+if [ "$FORCE_REBUILD_CLI" != "true" ] && [ -x "$FMSG_MCP_BIN" ] && [ -f "$FMSG_MCP_REF_FILE" ]; then
+  if [ "$(cat "$FMSG_MCP_REF_FILE")" = "$FMSG_MCP_REF" ]; then
+    NEED_BUILD_MCP=false
+  fi
+fi
+
+if [ "$NEED_BUILD_MCP" = "true" ]; then
+  echo "==> Building fmsg-mcp (ref: $FMSG_MCP_REF)..."
+  begin_log_group "build fmsg-mcp"
+  FMSG_MCP_DIR=$(mktemp -d)
+  git clone --branch "$FMSG_MCP_REF" --depth 1 https://github.com/markmnl/fmsg-mcp-claude.git "$FMSG_MCP_DIR"
+  (cd "$FMSG_MCP_DIR" && go build -o "$FMSG_MCP_BIN" .)
+  rm -rf "$FMSG_MCP_DIR"
+  echo "$FMSG_MCP_REF" > "$FMSG_MCP_REF_FILE"
+  end_log_group
+else
+  echo "==> Using cached fmsg-mcp (ref: $FMSG_MCP_REF)"
+fi
+
+export FMSG_MCP_BIN
+echo "==> fmsg-mcp: $FMSG_MCP_BIN"
+
 if [ "$SKIP_START" != "true" ]; then
   # ── Clean up any previous run ──────────────────────────────
   cleanup
@@ -222,7 +250,9 @@ if [ "$SKIP_START" != "true" ]; then
   # Docker Desktop credential helpers can fail during BuildKit metadata loads;
   # serial docker pulls avoid that path and warm the local image cache.
   echo "==> Ensuring public base images are available..."
-  for image in debian:bookworm-slim golang:1.25 postgres:18-alpine certbot/certbot:latest; do
+  # Fully-qualified names: podman's short-name resolution wants a TTY prompt
+  # when an alias is missing, which kills non-interactive runs.
+  for image in docker.io/library/debian:bookworm-slim docker.io/library/golang:1.25 docker.io/library/postgres:18-alpine docker.io/certbot/certbot:latest; do
     if ! docker image inspect "$image" >/dev/null 2>&1; then
       docker pull "$image"
     fi
