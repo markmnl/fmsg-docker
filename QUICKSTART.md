@@ -64,7 +64,7 @@ CERTBOT_EMAIL=
 FMSG_API_TOKEN_ED25519_PRIVATE_KEY=<base64-ed25519-seed>
 FMSGD_READER_PGPASSWORD=<strong-password>
 FMSGD_WRITER_PGPASSWORD=<strong-password>
-FMSGD_READER_PGPASSWORD=<strong-password>
+FMSGID_READER_PGPASSWORD=<strong-password>
 FMSGID_WRITER_PGPASSWORD=<strong-password>
 ```
 
@@ -79,6 +79,9 @@ Exit the fmsg login shell and start the stack for the first time by changing int
 
 ```sh
 exit
+```
+
+```sh
 cd /opt/fmsg-docker/compose
 sudo env PGPASSWORD='<postgres-password>' docker compose up -d
 ```
