@@ -45,7 +45,12 @@ Create A (or AAAA if your public IP is IPv6) DNS records to resolve to your serv
 1. `fmsg.<your-domain>`
 2. `fmsgapi.<your-domain>`
 
-_NOTE_ Ensure DNS is kept up-to-date with your server's IP so you can send and receive messages!
+_NOTE_ Ensure DNS is kept up-to-date with your server's IP so you can send and receive messages! e.g. using `dig`, `nslookup` or `gent hosts`:
+
+```sh
+getent hosts fmsg.<your-domain>
+getent hosts fmsgapi.<your-domain>
+```
 
 ### 2. Configure FMSG
 
