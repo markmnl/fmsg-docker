@@ -116,7 +116,7 @@ address,display_name,accepting_new,limit_recv_size_total,limit_recv_size_per_msg
 You can copy it into the volume with (file changes will sync automatically):
 
 ```sh
-sudo docker compose cp addresses.csv fmsgid:/opt/fmsgid/data/addresses.csv
+sudo docker compose -f /opt/fmsg-docker/compose/docker-compose.yml cp /path/to/your/addresses.csv fmsgid:/opt/fmsgid/data/addresses.csv
 ```
 
 ### Connect a Client
@@ -126,10 +126,10 @@ Create an API key for a user, then use it with [fmsg-cli](https://github.com/mar
 To create an API key for `@alice@example.com`:
 
 ```sh
-sudo docker compose exec fmsg-webapi /opt/fmsg-webapi/fmsg-webapi api-key create-delegation \
+sudo docker compose -f /opt/fmsg-docker/compose/docker-compose.yml exec fmsg-webapi /opt/fmsg-webapi/fmsg-webapi api-key create-delegation \
   -owner @alice@example.com \
   -agent cli \
-  -addr @alice@example.com \
+  -addr @alice_test@example.com \
   -cidr 0.0.0.0/0,::/0 \
   -expires 2027-12-31T00:00:00Z
 
