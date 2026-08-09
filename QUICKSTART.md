@@ -110,8 +110,10 @@ Create users (message stores, analoguous to mailboxes) by placing a CSV file in 
 
 ```csv
 address,display_name,accepting_new,limit_recv_size_total,limit_recv_size_per_msg,limit_recv_size_per_1d,limit_recv_count_per_1d,limit_send_size_total,limit_send_size_per_msg,limit_send_size_per_1d,limit_send_count_per_1d
-@alice@example.com,Alice,true,102400000,10240,102400,1000,102400000,10240,102400,1000
+@alice@<your-domain>,Alice,true,102400000,10240,102400,1000,102400000,10240,102400,1000
 ```
+
+Replace `<your-domain>` with the value of your domain.
 
 You can copy it into the volume with (file changes will sync automatically):
 
@@ -123,13 +125,13 @@ sudo docker compose -f /opt/fmsg-docker/compose/docker-compose.yml cp /path/to/y
 
 Create an API key for a user, then use it with [fmsg-cli](https://github.com/markmnl/fmsg-cli) or access the [fmsg-webapi](https://github.com/markmnl/fmsg-webapi) API directly at `https://fmsgapi.<your-domain>`.
 
-To create an API key for `@alice@example.com`:
+To create an API key for `@alice@<your-domain>`:
 
 ```sh
-sudo docker compose -f /opt/fmsg-docker/compose/docker-compose.yml exec fmsg-webapi /opt/fmsg-webapi/fmsg-webapi api-key create-delegation \
-  -owner @alice@example.com \
+sudo docker compose exec fmsg-webapi /opt/fmsg-webapi/fmsg-webapi api-key create-delegation \
+  -owner @alice@<your-domain> \
   -agent cli \
-  -addr @alice_test@example.com \
+  -addr @alice@<your-domain> \
   -cidr 0.0.0.0/0,::/0 \
   -expires 2027-12-31T00:00:00Z
 
