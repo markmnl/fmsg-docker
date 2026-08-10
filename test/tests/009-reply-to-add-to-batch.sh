@@ -79,9 +79,13 @@ PAYLOAD_PATH="/opt/fmsg/data/example.com/carol/out/test-009-$TEST_TOKEN"
 printf %s "$REPLY_TEXT" | docker exec -i example-fmsgd-1 sh -c "mkdir -p /opt/fmsg/data/example.com/carol/out && cat > $PAYLOAD_PATH"
 REPLY_SIZE=$(printf %s "$REPLY_TEXT" | wc -c)
 
-REPLY_ROW_ID=$(psql_example "insert into msg (version, no_reply, is_important, is_deflate, from_addr, topic, type, size, filepath, time_sent, psha256)
-values (1, false, false, false, '$CAROL_ADDR', '', 'text/plain;charset=UTF-8', $REPLY_SIZE, '$PAYLOAD_PATH', extract(epoch from now()), decode('$BATCH_HASH', 'hex'))
-returning id")
+# Wrapped in a CTE because psql prints the "INSERT 0 1" command tag even
+# with -tA; selecting from the CTE yields just the id.
+REPLY_ROW_ID=$(psql_example "with ins as (
+  insert into msg (version, no_reply, is_important, is_deflate, from_addr, topic, type, size, filepath, time_sent, psha256)
+  values (1, false, false, false, '$CAROL_ADDR', '', 'text/plain;charset=UTF-8', $REPLY_SIZE, '$PAYLOAD_PATH', extract(epoch from now()), decode('$BATCH_HASH', 'hex'))
+  returning id
+) select id from ins")
 [ -n "$REPLY_ROW_ID" ] || fail_test "could not insert carol's reply row at example.com"
 psql_example "insert into msg_to (msg_id, addr) values ($REPLY_ROW_ID, '$ALICE_ADDR')" > /dev/null
 echo "    Injected pending reply row ID: $REPLY_ROW_ID"
