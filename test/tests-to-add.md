@@ -25,17 +25,25 @@ to more than one recipient.
   from `GET /fmsg/:id` — via the new `api_json_get` helper in `test-lib.sh`.
   Non-delivery is asserted only for the terminal 102 case (101 is retryable).
 
-- [ ] **013 — multi-recipient, multi-domain fan-out** (SPEC §10.2)
+- [x] **013 — multi-recipient, multi-domain fan-out** (SPEC §10.2)
   Every existing test sends to exactly one recipient. `draft create` +
   `update --to @alice@hairpin.local,@carol@example.com` (CLI `--to` is a
   StringSlice) + `draft send`. Asserts per-domain delivery and per-recipient
   code stream ordering with >1 recipient.
+  **Done:** `test/tests/013-multi-recipient-fan-out.sh`. Pairs the unseeded
+  dave (100) with bob (200) on one domain and sends them in BOTH orders, so a
+  one-byte stream misalignment cannot pass; plus a two-domain message whose
+  remote outcome comes from fmsgd and whose local one comes from webapi's
+  resolveLocalDelivery. Also asserts receiving hosts retain the complete _to_
+  list (SPEC §11), which folds in most of what 014 was for.
 
 - [ ] **014 — same-domain / local delivery** (bob -> carol, both `@example.com`)
+  *Reduced by 013, which already covers a local recipient alongside a remote
+  one. What remains untested is a message with ONLY local recipients, which
+  never reaches fmsgd's outbound sender at all.*
   Exercises `resolveLocalDelivery`
   (`fmsg-webapi/internal/handlers/messages.go:97`), which bypasses the fmsgd
-  wire and is covered by nothing today. Optionally fold a mixed
-  local+remote recipient case into 013.
+  wire and is covered by nothing today.
 
 - [ ] **015 — notification-only add-to, code 11** (SPEC §10.4 step 1, §12, §11)
   Tests 004/009/010 all take the **65** path. Setup: alice(hairpin) ->
