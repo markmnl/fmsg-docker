@@ -85,3 +85,21 @@ wait_for_message_id_by_data() {
   rm -f "$tmp_file"
   fail_test "timed out waiting for expected message data"
 }
+
+# Exchange an fmsg API key for a short-lived JWT and GET a fmsg-webapi path,
+# printing the raw JSON response body. This is what fmsg-cli does internally;
+# tests need it directly to assert on fields the CLI does not render, such as
+# to_delivery[].response_code. Requires curl and jq.
+api_json_get() {
+  local api_url="$1"
+  local api_key="$2"
+  local path="$3"
+  local token
+
+  token=$(curl -s -X POST -H "Authorization: Bearer $api_key" "$api_url/fmsg/token" | jq -r '.access_token // empty')
+  if [ -z "$token" ]; then
+    fail_test "could not exchange API key for a JWT at $api_url/fmsg/token"
+  fi
+
+  curl -s -H "Authorization: Bearer $token" "$api_url$path"
+}
