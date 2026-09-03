@@ -60,6 +60,21 @@ fmsg-docker/
 | `fmsgid`      | fmsg Id HTTP API — manages users and quotas      |
 | `fmsgd`       | fmsg host — sends and receives fmsg messages     |
 | `fmsg-webapi` | fmsg Web API — HTTP interface to the fmsg db     |
+| `fmsg-mcp`    | Optional (`--profile mcp`): [fmsg-mcp](https://github.com/markmnl/fmsg-mcp) MCP server so AI agents can use fmsg through the Web API |
+
+### Optional MCP server
+
+`fmsg-mcp` is not started by default. It serves the [Model Context Protocol](https://modelcontextprotocol.io) over Streamable HTTP on port 8765 (bound to `127.0.0.1` unless `FMSG_MCP_HOST_PORT` says otherwise); every MCP client sends its own fmsg API key as `Authorization: Bearer fmsgk_...`, so one instance serves all users of the host.
+
+```bash
+# alongside the stack
+docker compose --profile mcp up -d
+
+# behind a TLS-terminating reverse proxy (e.g. Caddy: `mcp.example.com { reverse_proxy 127.0.0.1:8765 }`)
+FMSG_MCP_ALLOWED_HOSTS=mcp.example.com docker compose --profile mcp up -d
+```
+
+`FMSG_MCP_API_URL` overrides the Web API URL the server talks to (default `https://fmsgapi.<FMSG_DOMAIN>`); `FMSG_MCP_REF` pins the npm version (default `latest`). Give the proxy an idle timeout of at least 240 s: the `wait_for_message` tool holds a request open for up to `FMSG_MCP_WAIT_MAX_SECONDS`.
 
 ## Persistent Data Volumes
 
@@ -120,9 +135,9 @@ The compose stack uses Docker named volumes:
 
 ## Integration Tests
 
-End-to-end tests that spin up two full stacks (`hairpin.local` and `example.com`) on a shared Docker network and exchange messages between them using [fmsg-cli](https://github.com/markmnl/fmsg-cli). The test runner enables fmsg-webapi API-key auth, creates delegated API keys for the test actors during setup, and passes them to fmsg-cli with `FMSG_API_KEY`.
+End-to-end tests that spin up two full stacks (`hairpin.local` and `example.com`) on a shared Docker network and exchange messages between them using [fmsg-cli](https://github.com/markmnl/fmsg-cli). Test 008 drives [fmsg-mcp-claude](https://github.com/markmnl/fmsg-mcp-claude) over stdio and test 014 drives [fmsg-mcp](https://github.com/markmnl/fmsg-mcp) over Streamable HTTP (`FMSG_MCP_NPM_SPEC` picks the version, default `@markmnl/fmsg-mcp@latest`). The test runner enables fmsg-webapi API-key auth, creates delegated API keys for the test actors during setup, and passes them to fmsg-cli with `FMSG_API_KEY`.
 
-**Prerequisites:** Docker, docker compose, Go 1.24+, curl.
+**Prerequisites:** Docker, docker compose, Go 1.24+, curl, jq, Node.js 22+ (test 014 runs the published `@markmnl/fmsg-mcp` with `npx`).
 
 ```bash
 # Run tests (starts stacks fresh)

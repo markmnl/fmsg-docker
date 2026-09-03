@@ -133,6 +133,30 @@ services:
       fmsgid:
         condition: service_started
 
+  # Optional: MCP server for AI agents (https://github.com/markmnl/fmsg-mcp).
+  # Start with `docker compose --profile mcp up -d`. Clients connect to
+  # http://<host>:8765/mcp with their own fmsg API key as a bearer token; put a
+  # TLS-terminating reverse proxy in front and set FMSG_MCP_ALLOWED_HOSTS to
+  # its public hostname.
+  fmsg-mcp:
+    build:
+      context: ../docker/fmsg-mcp
+      dockerfile: Dockerfile
+      args:
+        FMSG_MCP_REF: ${FMSG_MCP_REF:-latest}
+        CACHEBUST: ${CACHEBUST:-}
+    profiles: ["mcp"]
+    restart: unless-stopped
+    environment:
+      FMSG_API_URL: ${FMSG_MCP_API_URL:-https://fmsgapi.${FMSG_DOMAIN}}
+      FMSG_MCP_ALLOWED_HOSTS: ${FMSG_MCP_ALLOWED_HOSTS:-}
+      FMSG_MCP_WAIT_MAX_SECONDS: ${FMSG_MCP_WAIT_MAX_SECONDS:-230}
+    ports:
+      - "${FMSG_MCP_HOST_PORT:-127.0.0.1:8765}:8765"
+    depends_on:
+      fmsg-webapi:
+        condition: service_started
+
 volumes:
   postgres_data:
   fmsg_data:
