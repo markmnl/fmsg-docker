@@ -240,3 +240,6 @@ FMSG_CHALLENGE_MODE=ALWAYS ./test/run-tests-podman.sh
 For coordinated feature branches, set `FMSGD_REF` and `FMSG_WEBAPI_REF` to those
 branches. `FMSG_TEST_NETWORK` optionally changes the shared test network name
 (default `fmsg-test`).
+
+Pull-request CI selects the matching component branch when it exists, otherwise
+`main`. Manual workflow inputs take precedence. CI forces challenge responses.
