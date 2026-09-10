@@ -222,12 +222,15 @@ On first startup (empty data volume), PostgreSQL runs the scripts in `docker/pos
 
 ### Testing message finalization
 
-The message schema now requires a SHA-256 whenever a message becomes sent. Deploy
-compatible daemon/API versions with this schema; pause writers and federation during
-an existing-stack upgrade and run `/opt/fmsgd/fmsg-backfill -domain example.com -apply`
-from the daemon container before resuming. Run the command without `-apply` to list
-pending records. Retain the shared message data volume, including `.fmsg-wire-*`
-directories. The daemon owns this schema; the initialization file here is its copy.
+The message schema requires a SHA-256 and durable wire representation for sent
+messages. The initialization SQL is for new databases only. To upgrade an existing
+stack, stop the daemon and API, back up the database and shared data volume, then run
+[the standalone `fmsg-backfill` binary](https://github.com/markmnl/fmsgd#immutable-message-finalization-and-upgrades)
+with access to the database and stored payload paths. It embeds the schema upgrade;
+run without `-apply` for a full dry run and with `-apply` to commit. Start the matching
+daemon/API only after migration succeeds. The migration binary is not bundled in the
+daemon image. Retain the shared message volume, including `.fmsg-wire-*` directories.
+The daemon owns the schema; the initialization file here is its bootstrap copy.
 
 Test `015-message-sha256.sh` verifies local-only hashing, later federation with
 compression, batch-hash replies, and notification-only add-to. Test `009` now creates
