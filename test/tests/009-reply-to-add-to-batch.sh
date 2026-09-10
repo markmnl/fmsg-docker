@@ -10,14 +10,8 @@
 # hash from the add-to header plus its stored copy of the original data, and
 # the originating host persists the hash of batches it sends.
 #
-# Regression coverage for fmsgd#35 (batch identity is the batch message
-# hash, stored on msg_add_to_batch) and fmsgd#39 (replies resolving batch
-# hashes; ensureBatchHash on the originator). fmsg-webapi cannot yet compose
-# a reply referencing a batch, so this test injects the pending outbound
-# reply directly into the sender host's database in the same shape
-# fmsg-webapi writes — psha256 carries the parent hash; the relational pid
-# stays null so the populate-psha256 trigger passes it through — and lets
-# fmsgd deliver it cross-instance.
+# Compose the reply through the API using the batch hash. No direct database
+# injection is needed: the API preserves the exact protocol parent reference.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -74,21 +68,13 @@ if [ "$HAIRPIN_BATCH_HASH" != "$BATCH_HASH" ]; then
 fi
 echo "    Originator and receiver agree on the batch hash"
 
-echo "    Injecting carol's pending reply to the batch (pid = batch hash) at example.com"
-PAYLOAD_PATH="/opt/fmsg/data/example.com/carol/out/test-009-$TEST_TOKEN"
-printf %s "$REPLY_TEXT" | docker exec -i example-fmsgd-1 sh -c "mkdir -p /opt/fmsg/data/example.com/carol/out && cat > $PAYLOAD_PATH"
-REPLY_SIZE=$(printf %s "$REPLY_TEXT" | wc -c)
-
-# Wrapped in a CTE because psql prints the "INSERT 0 1" command tag even
-# with -tA; selecting from the CTE yields just the id.
-REPLY_ROW_ID=$(psql_example "with ins as (
-  insert into msg (version, no_reply, is_important, is_deflate, from_addr, topic, type, size, filepath, time_sent, psha256)
-  values (1, false, false, false, '$CAROL_ADDR', '', 'text/plain;charset=UTF-8', $REPLY_SIZE, '$PAYLOAD_PATH', extract(epoch from now()), decode('$BATCH_HASH', 'hex'))
-  returning id
-) select id from ins")
-[ -n "$REPLY_ROW_ID" ] || fail_test "could not insert carol's reply row at example.com"
-psql_example "insert into msg_to (msg_id, addr) values ($REPLY_ROW_ID, '$ALICE_ADDR')" > /dev/null
-echo "    Injected pending reply row ID: $REPLY_ROW_ID"
+echo "    Creating carol's reply through the API using the batch hash"
+REPLY_INPUT=$(jq -n --arg from "$CAROL_ADDR" --arg to "$ALICE_ADDR" \
+  --arg parent "$BATCH_HASH" --arg body "$REPLY_TEXT" \
+  '{version:1, from:$from, to:[$to], pid:$parent, topic:"", type:"text/plain;charset=UTF-8", data:$body}')
+REPLY_ROW_ID=$(api_json_write "$EXAMPLE_API_URL" "$CAROL_API_KEY" POST /fmsg "$REPLY_INPUT" | jq -er '.id')
+REPLY_HASH=$(api_json_write "$EXAMPLE_API_URL" "$CAROL_API_KEY" POST "/fmsg/$REPLY_ROW_ID/send" '{}' | jq -er '.sha256')
+[[ "$REPLY_HASH" =~ ^[0-9a-f]{64}$ ]] || fail_test "reply was sent without a hash"
 
 echo "    Waiting for cross-instance delivery of the batch reply to $ALICE_ADDR..."
 ALICE_REPLY_ID=$(wait_for_message_id_by_data "$HAIRPIN_API_URL" "$ALICE_API_KEY" "$REPLY_TEXT" 30)

@@ -103,3 +103,11 @@ api_json_get() {
 
   curl -s -H "Authorization: Bearer $token" "$api_url$path"
 }
+
+# Send JSON through the authenticated API for fields the CLI does not expose.
+api_json_write() {
+  local api_url="$1" api_key="$2" method="$3" path="$4" body="$5" token
+  token=$(curl -fsS -X POST -H "Authorization: Bearer $api_key" "$api_url/fmsg/token" | jq -er '.access_token')
+  curl -fsS -X "$method" -H "Authorization: Bearer $token" \
+    -H 'Content-Type: application/json' --data "$body" "$api_url$path"
+}

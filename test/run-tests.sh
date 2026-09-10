@@ -43,7 +43,7 @@ cleanup() {
   COMPOSE_PROJECT_NAME=example FMSG_DOMAIN=example.com FMSG_WEBAPI_HOST_PORT=8182 \
     docker compose -f docker-compose.yml -f ../test/docker-compose.test.yml down -v 2>/dev/null || true
 
-  docker network rm fmsg-test 2>/dev/null || true
+  docker network rm "${FMSG_TEST_NETWORK:-fmsg-test}" 2>/dev/null || true
   rm -rf "$REPO_ROOT/test/.tls"
   rm -rf "$TEST_LOG_DIR"
   echo "==> Cleanup complete."
@@ -260,7 +260,7 @@ if [ "$SKIP_START" != "true" ]; then
 
   # ── Create shared Docker network ──────────────────────────
   echo "==> Creating fmsg-test network..."
-  docker network create fmsg-test
+  docker network create "${FMSG_TEST_NETWORK:-fmsg-test}"
 
   # ── Generate self-signed TLS certificates ─────────────────
   echo "==> Generating self-signed TLS certificates..."

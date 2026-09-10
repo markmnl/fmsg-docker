@@ -37,7 +37,7 @@ to more than one recipient.
   resolveLocalDelivery. Also asserts receiving hosts retain the complete _to_
   list (SPEC §11), which folds in most of what 014 was for.
 
-- [ ] **014 — same-domain / local delivery** (bob -> carol, both `@example.com`)
+- [x] **014 — same-domain / local delivery** (bob -> carol, both `@example.com`)
   *Reduced by 013, which already covers a local recipient alongside a remote
   one. What remains untested is a message with ONLY local recipients, which
   never reaches fmsgd's outbound sender at all.*
@@ -45,7 +45,7 @@ to more than one recipient.
   (`fmsg-webapi/internal/handlers/messages.go:97`), which bypasses the fmsgd
   wire and is covered by nothing today.
 
-- [ ] **015 — notification-only add-to, code 11** (SPEC §10.4 step 1, §12, §11)
+- [x] **015 — notification-only add-to, code 11** (SPEC §10.4 step 1, §12, §11)
   Tests 004/009/010 all take the **65** path. Setup: alice(hairpin) ->
   bob(example); then **bob** adds `@carol@example.com`, so hairpin.local hosts
   only `from` and must respond 11 and record the batch. Key assertion: alice can
@@ -115,3 +115,7 @@ expose, so they follow test 009's precedent of injecting a pending outbound row
 directly into the sender's database. Those tests will break whenever
 `fmsgd/dd.sql` changes shape — a deliberate maintenance cost, currently paid
 once.
+
+Tests `009` and `015-message-sha256.sh` cover API batch-hash replies, local-only
+identities and subsequent federation, and compressed notification-only add-to.
+Run with `FMSG_CHALLENGE_MODE=ALWAYS` to assert challenge-response coverage.

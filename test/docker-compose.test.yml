@@ -22,6 +22,7 @@ services:
 
   fmsgd:
     environment:
+      FMSG_CHALLENGE_MODE: ${FMSG_CHALLENGE_MODE:-HAS_NOT_PARTICIPATED}
       FMSG_TLS_CERT: /opt/fmsg/tls/fmsg.${FMSG_DOMAIN}.crt
       FMSG_TLS_KEY: /opt/fmsg/tls/fmsg.${FMSG_DOMAIN}.key
       FMSG_TLS_INSECURE_SKIP_VERIFY: "true"
@@ -58,3 +59,4 @@ networks:
   default:
   fmsg-test:
     external: true
+    name: ${FMSG_TEST_NETWORK:-fmsg-test}

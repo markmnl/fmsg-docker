@@ -34,13 +34,39 @@ jobs:
         with:
           go-version: "stable"
 
+      - name: Select component refs
+        id: refs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BRANCH: ${{ github.head_ref }}
+          INPUT_FMSGD: ${{ inputs.fmsgd_ref }}
+          INPUT_FMSGID: ${{ inputs.fmsgid_ref }}
+          INPUT_WEBAPI: ${{ inputs.fmsg_webapi_ref }}
+          INPUT_CLI: ${{ inputs.fmsg_cli_ref }}
+        run: |
+          pick_ref() {
+            local repo="$1" explicit="$2"
+            if [ -n "$explicit" ]; then
+              printf '%s\n' "$explicit"
+            elif [ -n "$PR_BRANCH" ] && gh api "repos/markmnl/$repo/git/ref/heads/$PR_BRANCH" >/dev/null 2>&1; then
+              printf '%s\n' "$PR_BRANCH"
+            else
+              echo main
+            fi
+          }
+          echo "fmsgd=$(pick_ref fmsgd "$INPUT_FMSGD")" >> "$GITHUB_OUTPUT"
+          echo "fmsgid=$(pick_ref fmsgid "$INPUT_FMSGID")" >> "$GITHUB_OUTPUT"
+          echo "webapi=$(pick_ref fmsg-webapi "$INPUT_WEBAPI")" >> "$GITHUB_OUTPUT"
+          echo "cli=$(pick_ref fmsg-cli "$INPUT_CLI")" >> "$GITHUB_OUTPUT"
+
       - name: Run integration tests
         run: bash test/run-tests.sh
         env:
-          FMSGD_REF: ${{ github.event.inputs.fmsgd_ref }}
-          FMSGID_REF: ${{ github.event.inputs.fmsgid_ref }}
-          FMSG_WEBAPI_REF: ${{ github.event.inputs.fmsg_webapi_ref }}
-          FMSG_CLI_REF: ${{ github.event.inputs.fmsg_cli_ref }}
+          FMSGD_REF: ${{ steps.refs.outputs.fmsgd }}
+          FMSGID_REF: ${{ steps.refs.outputs.fmsgid }}
+          FMSG_WEBAPI_REF: ${{ steps.refs.outputs.webapi }}
+          FMSG_CLI_REF: ${{ steps.refs.outputs.cli }}
+          FMSG_CHALLENGE_MODE: ALWAYS
 
       - name: Upload integration logs
         if: failure()

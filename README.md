@@ -219,3 +219,30 @@ On first startup (empty data volume), PostgreSQL runs the scripts in `docker/pos
 > ```
 
 
+
+### Testing message finalization
+
+The message schema requires a SHA-256 and durable wire representation for sent
+messages. The initialization SQL is for new databases only. To upgrade an existing
+stack, stop the daemon and API, back up the database and shared data volume, then run
+[the standalone `fmsg-backfill` binary](https://github.com/markmnl/fmsgd#immutable-message-finalization-and-upgrades)
+with access to the database and stored payload paths. It embeds the schema upgrade;
+run without `-apply` for a full dry run and with `-apply` to commit. Start the matching
+daemon/API only after migration succeeds. The migration binary is not bundled in the
+daemon image. Retain the shared message volume, including `.fmsg-wire-*` directories.
+The daemon owns the schema; the initialization file here is its bootstrap copy.
+
+Test `015-message-sha256.sh` verifies local-only hashing, later federation with
+compression, batch-hash replies, and notification-only add-to. Test `009` now creates
+batch replies through the API. To exercise challenge responses on every exchange:
+
+```sh
+FMSG_CHALLENGE_MODE=ALWAYS ./test/run-tests-podman.sh
+```
+
+For coordinated feature branches, set `FMSGD_REF` and `FMSG_WEBAPI_REF` to those
+branches. `FMSG_TEST_NETWORK` optionally changes the shared test network name
+(default `fmsg-test`).
+
+Pull-request CI selects the matching component branch when it exists, otherwise
+`main`. Manual workflow inputs take precedence. CI forces challenge responses.
