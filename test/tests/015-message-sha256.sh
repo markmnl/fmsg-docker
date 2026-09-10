@@ -50,7 +50,7 @@ ADD_INPUT=$(jq -n --arg addr "$CAROL_ADDR" '{add_to:[$addr]}')
 NOTIFY_HASH=$(api_json_write "$EXAMPLE_API_URL" "$BOB_API_KEY" POST "/fmsg/$HASH/add-to" "$ADD_INPUT" | jq -er '.sha256')
 FOUND=false
 for attempt in $(seq 1 30); do
-  if api_json_get "$HAIRPIN_API_URL" "$ALICE_API_KEY" "/fmsg/$HASH" | jq -e --arg hash "$NOTIFY_HASH" 'any(.add_to[]; .sha256 == $hash)' >/dev/null; then
+  if api_json_get "$HAIRPIN_API_URL" "$ALICE_API_KEY" "/fmsg/$HASH" | jq -e --arg hash "$NOTIFY_HASH" 'any(.add_to[]?; .sha256 == $hash)' >/dev/null; then
     FOUND=true
     break
   fi
