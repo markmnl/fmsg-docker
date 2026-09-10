@@ -6,7 +6,8 @@ ARG CACHEBUST
 WORKDIR /build
 
 RUN git clone --branch "$FMSGD_REF" --depth 1 https://github.com/markmnl/fmsgd.git . && \
-    go build -o fmsgd ./cmd/fmsgd
+    go build -o fmsgd ./cmd/fmsgd && \
+    go build -o fmsg-backfill ./cmd/fmsg-backfill
 
 FROM debian:bookworm-slim
 
@@ -18,6 +19,7 @@ RUN useradd -r -s /bin/false fmsg
 WORKDIR /opt/fmsgd
 
 COPY --from=builder /build/fmsgd /opt/fmsgd/fmsgd
+COPY --from=builder /build/fmsg-backfill /opt/fmsgd/fmsg-backfill
 
 RUN mkdir -p /opt/fmsg/data && \
     chown -R fmsg:fmsg /opt/fmsgd /opt/fmsg/data

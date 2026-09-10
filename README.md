@@ -219,3 +219,24 @@ On first startup (empty data volume), PostgreSQL runs the scripts in `docker/pos
 > ```
 
 
+
+### Testing message finalization
+
+The message schema now requires a SHA-256 whenever a message becomes sent. Deploy
+compatible daemon/API versions with this schema; pause writers and federation during
+an existing-stack upgrade and run `/opt/fmsgd/fmsg-backfill -domain example.com -apply`
+from the daemon container before resuming. Run the command without `-apply` to list
+pending records. Retain the shared message data volume, including `.fmsg-wire-*`
+directories. The daemon owns this schema; the initialization file here is its copy.
+
+Test `015-message-sha256.sh` verifies local-only hashing, later federation with
+compression, batch-hash replies, and notification-only add-to. Test `009` now creates
+batch replies through the API. To exercise challenge responses on every exchange:
+
+```sh
+FMSG_CHALLENGE_MODE=ALWAYS ./test/run-tests-podman.sh
+```
+
+For coordinated feature branches, set `FMSGD_REF` and `FMSG_WEBAPI_REF` to those
+branches. `FMSG_TEST_NETWORK` optionally changes the shared test network name
+(default `fmsg-test`).
