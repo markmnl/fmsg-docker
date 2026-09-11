@@ -29,8 +29,8 @@
 # podman-compose also names containers "<project>_<service>_<index>"
 # (underscores) whereas docker compose v2 names them
 # "<project>-<service>-<index>" (hyphens). run-tests.sh hardcodes the
-# docker-compose-v2-style names for `docker exec` targets, so the shim
-# rewrites those to podman-compose's naming for that subcommand only.
+# docker-compose-v2-style names for `docker exec` and `docker logs` targets,
+# so the shim rewrites those to podman-compose's naming for both subcommands.
 #
 # Usage: same as run-tests.sh, e.g.
 #   ./test/run-tests-podman.sh
@@ -117,7 +117,7 @@ cat > "$SHIM_DIR/docker" <<EOF
 set -euo pipefail
 
 args=("\$@")
-if [ "\${1:-}" = "exec" ]; then
+if [ "\${1:-}" = "exec" ] || [ "\${1:-}" = "logs" ]; then
   for i in "\${!args[@]}"; do
     if [[ "\${args[\$i]}" != -* ]] && [ "\$i" != "0" ]; then
       name="\${args[\$i]}"
