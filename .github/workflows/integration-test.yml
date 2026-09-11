@@ -2,6 +2,8 @@ name: Integration Test
 run-name: "Integration Test (${{ inputs.fmsgd_ref }})"
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -23,16 +25,19 @@ on:
         required: false
         default: 'main'
 
+permissions:
+  contents: read
+
 jobs:
   integration-test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
-          go-version: "stable"
+          go-version: "1.27.x"
 
       - name: Select component refs
         id: refs

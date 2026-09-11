@@ -2,7 +2,7 @@
 # =============================================================
 # Run the fmsg integration tests using podman instead of docker.
 #
-# Prerequisites: podman, podman-compose (or docker-compose) go (1.24+), curl
+# Prerequisites: podman, podman-compose (or docker-compose) go (1.27+), curl
 #
 # This shims a `docker` executable onto PATH that execs podman, then
 # delegates straight to run-tests.sh so the two runners stay in sync.
