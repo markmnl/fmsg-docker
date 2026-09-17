@@ -1,4 +1,5 @@
-[![Integration Test](https://github.com/markmnl/fmsg-docker/actions/workflows/integration-test.yml/badge.svg)](https://github.com/markmnl/fmsg-docker/actions/workflows/integration-test.yml)
+[![Integration Test](https://github.com/markmnl/fmsg-docker/actions/workflows/integration-test.yml/badge.svg?branch=main)](https://github.com/markmnl/fmsg-docker/actions/workflows/integration-test.yml?query=branch%3Amain)
+[![Go 1.27+](https://img.shields.io/badge/Go-1.27%2B-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
 
 # fmsg-docker
 
@@ -137,7 +138,7 @@ The compose stack uses Docker named volumes:
 
 End-to-end tests that spin up two full stacks (`hairpin.local` and `example.com`) on a shared Docker network and exchange messages between them using [fmsg-cli](https://github.com/markmnl/fmsg-cli). Test 008 drives [fmsg-mcp-claude](https://github.com/markmnl/fmsg-mcp-claude) over stdio and test 014 drives [fmsg-mcp](https://github.com/markmnl/fmsg-mcp) over Streamable HTTP (`FMSG_MCP_NPM_SPEC` picks the version, default `@markmnl/fmsg-mcp@latest`). The test runner enables fmsg-webapi API-key auth, creates delegated API keys for the test actors during setup, and passes them to fmsg-cli with `FMSG_API_KEY`.
 
-**Prerequisites:** Docker, docker compose, Go 1.24+, curl, jq, Node.js 22+ (test 014 runs the published `@markmnl/fmsg-mcp` with `npx`).
+**Prerequisites:** Docker, docker compose, Go 1.27+, curl, jq, Node.js 22+ (test 014 runs the published `@markmnl/fmsg-mcp` with `npx`).
 
 ```bash
 # Run tests (starts stacks fresh)

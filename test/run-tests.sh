@@ -2,7 +2,7 @@
 # =============================================================
 # Run the fmsg integration tests.
 #
-# Prerequisites: docker, docker compose, go (1.24+), curl
+# Prerequisites: docker, docker compose, go (1.27+), curl
 #
 # Usage:
 #   ./test/run-tests.sh            # run tests (start stacks fresh)
@@ -252,7 +252,7 @@ if [ "$SKIP_START" != "true" ]; then
   echo "==> Ensuring public base images are available..."
   # Fully-qualified names: podman's short-name resolution wants a TTY prompt
   # when an alias is missing, which kills non-interactive runs.
-  for image in docker.io/library/debian:bookworm-slim docker.io/library/golang:1.25 docker.io/library/postgres:18-alpine docker.io/certbot/certbot:latest; do
+  for image in docker.io/library/debian:bookworm-slim docker.io/library/golang:1.27 docker.io/library/postgres:18-alpine docker.io/certbot/certbot:latest; do
     if ! docker image inspect "$image" >/dev/null 2>&1; then
       docker pull "$image"
     fi
