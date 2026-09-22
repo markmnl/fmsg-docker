@@ -36,3 +36,5 @@ go.work.sum
 .bin/
 test/.tls/
 test/.logs/
+# Deployment-specific compose files (e.g. docker-compose-behind-caddy.yml)
+/compose/docker-compose-*.yml
