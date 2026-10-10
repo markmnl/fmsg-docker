@@ -138,6 +138,7 @@ create_or_rotate_api_key() {
   local owner="$2"
   local addr="$3"
   local output
+  local create_output
   local api_key
 
   if ! output=$(docker exec "$container" /opt/fmsg-webapi/fmsg-webapi api-key create-delegation \
@@ -146,13 +147,15 @@ create_or_rotate_api_key() {
       -addr "$addr" \
       -cidr "0.0.0.0/0,::/0" \
       -expires "2099-01-01T00:00:00Z" 2>&1); then
+    create_output="$output"
     if ! output=$(docker exec "$container" /opt/fmsg-webapi/fmsg-webapi api-key rotate-delegation \
         -owner "$owner" \
         -agent test \
         -cidr "0.0.0.0/0,::/0" \
         -expires "2099-01-01T00:00:00Z" 2>&1); then
       echo "Failed to create API key for $addr" >&2
-      echo "$output" | sed 's/^api_key=.*/api_key=<redacted>/' >&2
+      echo "create-delegation: $create_output" | sed 's/^api_key=.*/api_key=<redacted>/' >&2
+      echo "rotate-delegation: $output" | sed 's/^api_key=.*/api_key=<redacted>/' >&2
       exit 1
     fi
   fi
