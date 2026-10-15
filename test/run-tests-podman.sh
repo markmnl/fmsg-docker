@@ -36,6 +36,10 @@
 #   ./test/run-tests-podman.sh
 #   ./test/run-tests-podman.sh --no-start
 #   ./test/run-tests-podman.sh cleanup
+#
+# It can also be sourced, like run-tests.sh, by callers that need the URLs and
+# keys run-tests.sh exports (fmsg-mcp's end-to-end runner does this). The shim
+# then stays on PATH; the caller removes $FMSG_PODMAN_SHIM_DIR when done.
 # =============================================================
 set -euo pipefail
 
@@ -44,7 +48,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 command -v podman &>/dev/null || { echo "podman not found on PATH" >&2; exit 1; }
 
 SHIM_DIR="$(mktemp -d)"
-trap 'rm -rf "$SHIM_DIR"' EXIT
 
 cat > "$SHIM_DIR/resolve-compose-vars.py" <<'EOF'
 import os
@@ -162,4 +165,12 @@ chmod +x "$SHIM_DIR/docker"
 
 export PATH="$SHIM_DIR:$PATH"
 
-exec "$SCRIPT_DIR/run-tests.sh" "$@"
+if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+  export FMSG_PODMAN_SHIM_DIR="$SHIM_DIR"
+  # shellcheck source=run-tests.sh
+  source "$SCRIPT_DIR/run-tests.sh" "$@"
+  return
+fi
+
+trap 'rm -rf "$SHIM_DIR"' EXIT
+"$SCRIPT_DIR/run-tests.sh" "$@"
