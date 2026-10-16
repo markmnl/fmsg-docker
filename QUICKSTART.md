@@ -2,7 +2,7 @@
 
 This quickstart gets the docker compose stack from this repository up and running on your public fmsg server.
 
-TLS provisioning is included and an HTTPS API is exposed so you can start sending and receiving fmsg messages for your domain. TCP port 4930 is also exposed for fmsg host-to-host communication.
+TLS provisioning is included and an HTTPS API is exposed so you can start sending and receiving fmsg messages for your domain. TCP port 4930 (the [IANA-registered](https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=fmsg) `fmsg` service port) is also exposed for fmsg host-to-host communication.
 
 
 ## Other Docs
