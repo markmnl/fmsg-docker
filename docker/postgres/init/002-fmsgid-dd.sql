@@ -59,7 +59,7 @@ create table if not exists address_tx (
 	id		bigserial			primary key,
 	address_lower	text		not null references address (address_lower) ,
 	ts		timestamptz			not null,
-	type	smallint			not null, -- 1 for recv, 2 for send
+	type	smallint			not null, -- 1 recv, 2 send, 3 recv released, 4 send released
 	size	int					not null
 );
 
